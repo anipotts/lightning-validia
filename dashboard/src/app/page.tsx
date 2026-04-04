@@ -1,156 +1,25 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   type ThreatEvent,
   type Stats,
   type AttackCategory,
-  type FlaggedFile,
   CATEGORY_LABELS,
   THREAT_LABELS,
-  LOG_PREFIXES,
   INITIAL_STATS,
-  INITIAL_FLAGGED_FILES,
 } from "./types";
 import { analyzePrompt, analyzePromptAPI } from "./analyzer";
-import { useGateway } from "./useGateway";
-import dynamic from "next/dynamic";
 
-const FlaggedContentBars = dynamic(() => import("./FlaggedContentBars"), { ssr: false });
-const FileIcon3D = dynamic(() => import("./FlaggedContentBars").then((m) => ({ default: m.FileIcon3D })), { ssr: false });
+// ─── Types ──────────────────────────────────────────────
 
-// ─── Launch Animation ──────────────────────────────────
-
-function Sprocket({ size = 120, color = "#c9a96e" }: { size?: number; color?: string }) {
-  const teeth = 8;
-  const outerR = size / 2;
-  const innerR = outerR * 0.72;
-  const toothH = outerR * 0.18;
-  const toothW = 0.22; // radians half-width
-
-  // Build sprocket gear path
-  const points: string[] = [];
-  for (let i = 0; i < teeth; i++) {
-    const angle = (i / teeth) * Math.PI * 2;
-    // Tooth outer corners
-    const a1 = angle - toothW;
-    const a2 = angle + toothW;
-    const r1 = innerR;
-    const r2 = outerR + toothH;
-    // Valley before tooth
-    const va = angle - Math.PI / teeth;
-    points.push(`${outerR + r1 * Math.cos(va)},${outerR + r1 * Math.sin(va)}`);
-    // Tooth rise
-    points.push(`${outerR + r2 * Math.cos(a1)},${outerR + r2 * Math.sin(a1)}`);
-    points.push(`${outerR + r2 * Math.cos(a2)},${outerR + r2 * Math.sin(a2)}`);
-  }
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {/* Gear body */}
-      <polygon
-        points={points.join(" ")}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      {/* Inner circle */}
-      <circle
-        cx={outerR}
-        cy={outerR}
-        r={innerR * 0.45}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-      />
-      {/* Center dot */}
-      <circle cx={outerR} cy={outerR} r={4} fill={color} />
-    </svg>
-  );
-}
-
-function LaunchAnimation({ onComplete }: { onComplete: () => void }) {
-  const [dots, setDots] = useState("");
-  const [phase, setPhase] = useState<"spin" | "done" | "fade">("spin");
-  const [opacity, setOpacity] = useState(1);
-
-  useEffect(() => {
-    const dotsInterval = setInterval(() => {
-      setDots((d) => (d.length >= 3 ? "" : d + "."));
-    }, 400);
-
-    const doneTimeout = setTimeout(() => {
-      setPhase("done");
-      clearInterval(dotsInterval);
-    }, 2400);
-
-    return () => {
-      clearInterval(dotsInterval);
-      clearTimeout(doneTimeout);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (phase === "done") {
-      const t = setTimeout(() => setPhase("fade"), 500);
-      return () => clearTimeout(t);
-    }
-    if (phase === "fade") {
-      setOpacity(0);
-      const t = setTimeout(onComplete, 500);
-      return () => clearTimeout(t);
-    }
-  }, [phase, onComplete]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center font-mono"
-      style={{
-        background: "#0a0a0a",
-        opacity,
-        transition: "opacity 0.5s ease-out",
-      }}
-    >
-      {/* Rotating sprocket */}
-      <div
-        style={{
-          animation: phase === "spin" ? "sprocket-spin 2s linear infinite" : "none",
-          transition: "filter 0.3s",
-          filter: phase === "done" ? "drop-shadow(0 0 12px #a3b18a)" : "none",
-        }}
-      >
-        <Sprocket size={120} color={phase === "done" ? "#a3b18a" : "#c9a96e"} />
-      </div>
-
-      {/* Status text */}
-      <div className="mt-8 text-center">
-        {phase === "done" ? (
-          <span className="text-xs tracking-[4px] uppercase" style={{ color: "#a3b18a" }}>
-            INITIALIZED
-          </span>
-        ) : (
-          <span className="text-xs tracking-[4px] uppercase" style={{ color: "#8a8478" }}>
-            INITIALIZING{dots}
-          </span>
-        )}
-      </div>
-
-      {/* Bottom branding */}
-      <div className="absolute bottom-8 text-center">
-        <div className="text-[10px] tracking-[4px] uppercase" style={{ color: "#3d3a34" }}>
-          SHIELDCLAW
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes sprocket-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  );
+interface ChatMessage {
+  id: string;
+  role: "user" | "shield" | "agent";
+  text: string;
+  event?: ThreatEvent;
+  streaming?: boolean;
+  timestamp: Date;
 }
 
 // ─── Helpers ────────────────────────────────────────────
@@ -168,15 +37,6 @@ function updateStats(prev: Stats, event: ThreatEvent): Stats {
   return next;
 }
 
-function pad(s: string, len: number): string {
-  return s + " ".repeat(Math.max(0, len - s.length));
-}
-
-function dotPad(label: string, value: number): string {
-  const dots = ".".repeat(Math.max(1, 26 - label.length));
-  return `  ${label} ${dots} ${value}`;
-}
-
 const LEVEL_TEXT_CLASS: Record<string, string> = {
   safe: "text-safe",
   suspicious: "text-suspicious",
@@ -184,524 +44,539 @@ const LEVEL_TEXT_CLASS: Record<string, string> = {
   blocked: "text-blocked",
 };
 
-type RocketPhase = "idle" | "launch" | "fly" | "land" | "crash";
-
-const ROCKET_ART =
-  "    |    \n" +
-  "   /|\\   \n" +
-  "  / | \\  \n" +
-  " |  S  | \n" +
-  " |  H  | \n" +
-  " |  I  | \n" +
-  " |  E  | \n" +
-  " |  L  | \n" +
-  " |  D  | \n" +
-  " \\_____/ \n" +
-  "  || ||  ";
-
-// Every line is exactly 9 chars, matching ROCKET_ART width
-const EXHAUST = [
-  " )|| ||( \n  \\~~~~/ \n   \\~~/  \n    \\/   ",
-  " (|| ||) \n  (~~~~) \n   (~~)  \n    \\/   ",
-  " )|| ||( \n  )~~~~( \n   )~~(  \n    \\/   ",
-];
-
-const CRASH_ART =
-  "      *      \n" +
-  "   \\  |  /   \n" +
-  "  -- * * --  \n" +
-  "   /  |  \\   \n" +
-  "     / \\     \n" +
-  "   /_ _ _\\   \n" +
-  "  |  S H  |  \n" +
-  "  | I E L |  \n" +
-  "  |__D____|  \n" +
-  "   //  \\\\    \n" +
-  " ~~~~~~~~~~~ ";
-
-const LANDED_ART =
-  "    |    \n" +
-  "   /|\\   \n" +
-  "  / | \\  \n" +
-  " |  S  | \n" +
-  " |  H  | \n" +
-  " |  I  | \n" +
-  " |  E  | \n" +
-  " |  L  | \n" +
-  " |  D  | \n" +
-  " \\_____/ \n" +
-  "  || ||  \n" +
-  " ======= \n" +
-  "    OK   ";
-
-const LEVEL_BG_CLASS: Record<string, string> = {
-  safe: "bg-safe",
-  suspicious: "bg-suspicious",
-  likely_attack: "bg-attack",
-  blocked: "bg-blocked",
-};
-
-// ─── Flagged File Row ───────────────────────────────────
-
-const SEVERITY_HEX: Record<string, string> = {
+const LEVEL_HEX: Record<string, string> = {
   safe: "#a3b18a",
   suspicious: "#c9a96e",
   likely_attack: "#b85c4a",
   blocked: "#8a3a2e",
 };
 
-function FlaggedFileRow({ file }: { file: FlaggedFile }) {
-  const [hovered, setHovered] = useState(false);
-  const color = SEVERITY_HEX[file.threatLevel];
+function formatTime(d: Date): string {
+  return d.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
 
-  return (
-    <div
-      className="rounded-sm flex items-stretch relative"
-      style={{ overflow: "visible" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* Background + severity flood fill */}
-      <div
-        className="absolute inset-0 rounded-sm"
-        style={{
-          background: hovered
-            ? `linear-gradient(90deg, ${color}35, ${color}10)`
-            : "#12110f",
-          border: hovered ? `1px solid ${color}50` : "1px solid transparent",
-          transition: "all 0.3s ease",
-        }}
-      />
+// ─── Pipeline Steps (real-time, with timing) ────────────
 
-      {/* Left severity strip — glows on hover */}
-      <div
-        className="w-1.5 shrink-0 rounded-l-sm relative z-[1]"
-        style={{
-          background: color,
-          boxShadow: hovered ? `0 0 8px ${color}80` : "none",
-          transition: "box-shadow 0.3s",
-        }}
-      />
+type PipelineStep = { text: string; color: string };
 
-      {/* Content */}
-      <div className="flex items-center gap-2 px-2 py-2 relative z-[1]">
-        {/* 3D icon — bursts upward on hover */}
-        <div
-          style={{
-            transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
-            transform: hovered ? "translateY(-8px) scale(1.25)" : "translateY(0) scale(1)",
-          }}
-        >
-          <FileIcon3D filename={file.name} isHovered={hovered} />
-        </div>
-        <div>
-          <div className={`text-[10px] font-bold ${LEVEL_TEXT_CLASS[file.threatLevel]}`}>
-            {THREAT_LABELS[file.threatLevel]}
-          </div>
-          <div className="text-text-dim text-[11px]">
-            {file.name} — {file.category} ({file.score.toFixed(2)})
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function usePipelineSteps(event: ThreatEvent | null) {
+  const [steps, setSteps] = useState<PipelineStep[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+
+  useEffect(() => {
+    if (!event) return;
+
+    setSteps([]);
+    setIsRunning(true);
+
+    const latency = event.latencyMs ?? 0;
+    // Distribute total latency across steps for granular display
+    const encodeMs = Math.round(latency * 0.15);
+    const fingerMs = Math.round(latency * 0.45);
+    const regexMs = Math.round(latency * 0.10);
+    const scoreMs = Math.round(latency * 0.20);
+    const overheadMs = latency - encodeMs - fingerMs - regexMs - scoreMs;
+
+    const planned: PipelineStep[] = [
+      { text: `Encoding message... (${encodeMs}ms)`, color: "#6b6560" },
+      { text: `Comparing against 158 fingerprints... (${fingerMs}ms)`, color: "#6b6560" },
+      { text: `Regex pattern scan... ${event.signals.length} matches (${regexMs}ms)`, color: event.signals.length > 0 ? "#c9a96e" : "#6b6560" },
+    ];
+
+    if (event.topMatches && event.topMatches.length > 0) {
+      const top = event.topMatches[0];
+      planned.push({
+        text: `Top similarity: ${top.similarity.toFixed(2)} (${top.category}) (${scoreMs}ms)`,
+        color: top.similarity > 0.7 ? "#b85c4a" : "#c9a96e",
+      });
+    } else {
+      planned.push({
+        text: `Scoring... ${event.threatScore.toFixed(3)} (${scoreMs}ms)`,
+        color: LEVEL_HEX[event.threatLevel] ?? "#6b6560",
+      });
+    }
+
+    if (event.twoStage) {
+      planned.push({ text: `Stage 2: Querying ${event.stage2Model ?? "Claude Haiku"}...`, color: "#c9a96e" });
+      planned.push({
+        text: `Stage 2 verdict: ${event.stage2Verdict}`,
+        color: event.stage2Verdict === "BENIGN" ? "#a3b18a" : "#b85c4a",
+      });
+    }
+
+    planned.push({
+      text: `RESULT: ${THREAT_LABELS[event.threatLevel]} — total ${latency}ms`,
+      color: LEVEL_HEX[event.threatLevel] ?? "#6b6560",
+    });
+
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < planned.length) {
+        const step = planned[i];
+        i++;
+        setSteps((prev) => [...prev, step]);
+      } else {
+        clearInterval(interval);
+        setIsRunning(false);
+      }
+    }, 150);
+
+    return () => clearInterval(interval);
+  }, [event]);
+
+  return { steps, isRunning };
 }
 
 // ─── Page ───────────────────────────────────────────────
 
 export default function Home() {
-  const [launched, setLaunched] = useState(false);
-  const [events, setEvents] = useState<ThreatEvent[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [stats, setStats] = useState<Stats>(INITIAL_STATS);
   const [input, setInput] = useState("");
-  const [useWs, setUseWs] = useState(false);
-  const [flaggedFiles, setFlaggedFiles] = useState<FlaggedFile[]>(INITIAL_FLAGGED_FILES);
-  const [routingEvent, setRoutingEvent] = useState<ThreatEvent | null>(null);
-  const [rocketPhase, setRocketPhase] = useState<RocketPhase>("idle");
-  const [exhaustFrame, setExhaustFrame] = useState(0);
-  const [pendingEvent, setPendingEvent] = useState<ThreatEvent | null>(null);
+  const [currentEvent, setCurrentEvent] = useState<ThreatEvent | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const handleLaunchComplete = useCallback(() => setLaunched(true), []);
+  const { steps: pipelineSteps, isRunning: pipelineRunning } = usePipelineSteps(currentEvent);
 
-  const gateway = useGateway(useWs);
-
-  // Merge gateway events
-  useEffect(() => {
-    if (gateway.events.length > 0 && gateway.events[0]) {
-      const latest = gateway.events[0];
-      if (!events.find((e) => e.id === latest.id)) {
-        setEvents((prev) => [latest, ...prev]);
-        setStats((prev) => updateStats(prev, latest));
-        setRoutingEvent(latest);
-      }
-    }
-  }, [gateway.events, events]);
-
-  // Exhaust animation loop during launch/fly
-  useEffect(() => {
-    if (rocketPhase !== "launch" && rocketPhase !== "fly") return;
-    const interval = setInterval(() => {
-      setExhaustFrame((f) => (f + 1) % EXHAUST.length);
-    }, 100);
-    return () => clearInterval(interval);
-  }, [rocketPhase]);
-
-  // Auto-scroll chat
+  // Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [events]);
+  }, [messages]);
+
+  function handleStop() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsAnalyzing(false);
+    setIsStreaming(false);
+    // Mark any streaming messages as done
+    setMessages((prev) => prev.map((m) => m.streaming ? { ...m, streaming: false } : m));
+  }
+
+  function handleClear() {
+    setMessages([]);
+    setStats(INITIAL_STATS);
+    setCurrentEvent(null);
+  }
+
+  async function streamAgentResponse(userText: string, msgId: string) {
+    const agentMsg: ChatMessage = {
+      id: msgId,
+      role: "agent",
+      text: "",
+      streaming: true,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, agentMsg]);
+    setIsStreaming(true);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // Helper: finalize this message (mark done, preserve whatever text we have)
+    const finalize = (appendText?: string) => {
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== msgId) return m;
+          const text = appendText ? m.text + appendText : m.text;
+          return { ...m, text: text || "No response received.", streaming: false };
+        })
+      );
+      setIsStreaming(false);
+      abortRef.current = null;
+    };
+
+    // Timeout: if nothing happens for 15s, stop gracefully
+    const timeout = setTimeout(() => {
+      controller.abort();
+      finalize(" [timeout]");
+    }, 15000);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userText }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        clearTimeout(timeout);
+        finalize(`Error: API returned ${res.status}`);
+        return;
+      }
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (contentType.includes("text/event-stream") && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let fullText = "";
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // Reset timeout on each chunk
+            clearTimeout(timeout);
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const data = line.slice(6).trim();
+              if (data === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.text) {
+                  fullText += parsed.text;
+                  setMessages((prev) =>
+                    prev.map((m) => m.id === msgId ? { ...m, text: fullText } : m)
+                  );
+                }
+              } catch {
+                // Malformed SSE chunk — skip, keep going
+              }
+            }
+          }
+        } catch (readErr: unknown) {
+          // Mid-stream read error — keep whatever text we got
+          if (readErr instanceof Error && readErr.name !== "AbortError") {
+            fullText += " [stream interrupted]";
+          }
+        }
+
+        clearTimeout(timeout);
+        finalize();
+      } else {
+        // Non-streaming JSON fallback
+        clearTimeout(timeout);
+        try {
+          const data = await res.json();
+          finalize(data.text || "Agent response unavailable.");
+        } catch {
+          finalize("Failed to parse response.");
+        }
+      }
+    } catch (e: unknown) {
+      clearTimeout(timeout);
+      if (e instanceof Error && e.name === "AbortError") {
+        // User stopped or timeout — keep partial text
+        setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, streaming: false } : m));
+        setIsStreaming(false);
+        abortRef.current = null;
+      } else {
+        finalize("Connection failed.");
+      }
+    }
+  }
 
   async function handleSend() {
     const text = input.trim();
-    if (!text) return;
-
-    if (useWs && gateway.sendMessage(text)) {
-      setInput("");
-      return;
-    }
+    if (!text || isAnalyzing) return;
 
     setInput("");
-    setRocketPhase("launch");
-    setTimeout(() => setRocketPhase("fly"), 400);
+    setIsAnalyzing(true);
+    setCurrentEvent(null);
 
-    // Try real API first, fall back to local
-    let event;
+    // 1. Add user message immediately
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      text,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+
+    // 2. Run shield analysis
+    let event: ThreatEvent;
     try {
       event = await analyzePromptAPI(text);
     } catch {
       event = analyzePrompt(text);
     }
 
-    setPendingEvent(event);
+    // 3. Add shield result message
+    const shieldMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "shield",
+      text: "",
+      event,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, shieldMsg]);
+    setStats((prev) => updateStats(prev, event));
+    setCurrentEvent(event);
+    setIsAnalyzing(false);
 
-    // land/crash after fly
-    setTimeout(() => {
-      const isSafe = event.threatLevel === "safe";
-      setRocketPhase(isSafe ? "land" : "crash");
-      setEvents((prev) => [...prev, event]);
-      setStats((prev) => updateStats(prev, event));
-      setRoutingEvent(event);
-      if (event.threatLevel !== "safe") {
-        setFlaggedFiles((prev) => [
-          { name: `msg_${stats.total + 1}`, threatLevel: event.threatLevel, category: event.category ?? "none", score: event.threatScore },
-          ...prev,
-        ]);
-      }
-    }, 800);
-    setTimeout(() => {
-      setRocketPhase("idle");
-      setPendingEvent(null);
-    }, 2600);
-    setInput("");
+    // 4. If passed (safe or suspicious-allow), stream agent response
+    if (event.threatLevel === "safe" || event.threatLevel === "suspicious") {
+      const agentId = crypto.randomUUID();
+      await streamAgentResponse(text, agentId);
+    }
   }
 
-  const blockRate = stats.total > 0
-    ? ((stats.blocked + stats.likely_attack) / stats.total * 100).toFixed(1)
-    : "0.0";
+  // Derived stats
+  const blockRate = stats.total > 0 ? ((stats.blocked + stats.likely_attack) / stats.total * 100).toFixed(1) : "0.0";
+  const allScores = messages.filter((m) => m.event).map((m) => m.event!.threatScore);
+  const avgScore = allScores.length > 0 ? (allScores.reduce((a, b) => a + b, 0) / allScores.length) : 0;
+  const highestScore = allScores.length > 0 ? Math.max(...allScores) : 0;
 
-  const safePercent = stats.total > 0 ? (stats.safe / stats.total * 100).toFixed(1) : "0.0";
-  const susPercent = stats.total > 0 ? (stats.suspicious / stats.total * 100).toFixed(1) : "0.0";
-  const attackPercent = stats.total > 0 ? (stats.likely_attack / stats.total * 100).toFixed(1) : "0.0";
-  const blockedPercent = stats.total > 0 ? (stats.blocked / stats.total * 100).toFixed(1) : "0.0";
-
-  const msgNumber = stats.total;
+  const catEntries = (Object.entries(CATEGORY_LABELS) as [AttackCategory, string][])
+    .map(([key, label]) => ({ key, label, count: stats.byCategory[key] }))
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const maxCatCount = catEntries.length > 0 ? catEntries[0].count : 1;
 
   return (
-    <>
-    {!launched && <LaunchAnimation onComplete={handleLaunchComplete} />}
     <div className="flex flex-col h-screen bg-bg text-text-primary font-mono">
-      {/* ─── Header ─── */}
+      {/* Header */}
       <header className="h-11 shrink-0 flex items-center justify-between px-5 bg-item border-b border-panel-border">
         <div className="flex items-center gap-3">
-          <span className="text-base font-bold tracking-wider text-text-primary">SHIELDCLAW</span>
+          <span className="text-base font-bold tracking-wider">SHIELDCLAW</span>
           <span className="text-text-sub">|</span>
-          <span className="text-[11px] text-text-dim tracking-wider">PARANOID SHIELD DASHBOARD</span>
+          <span className="text-[11px] text-text-dim tracking-wider">DISTILLATION ATTACK DETECTION</span>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setUseWs(!useWs)}
-            className="text-[10px] text-text-dim hover:text-text-primary border border-panel-border rounded px-2 py-0.5 transition-colors"
-          >
-            {useWs ? "LOCAL" : "CONNECT"}
-          </button>
-          <span className="text-[10px] text-text-dim">
-            {useWs ? gateway.status.toUpperCase() : "LIVE"}
-          </span>
-          <span className={`w-2 h-2 rounded-full ${useWs && gateway.status !== "connected" ? "bg-suspicious" : "bg-safe"}`} />
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-text-dim">LIVE</span>
+          <span className="w-2 h-2 rounded-full bg-safe" />
         </div>
       </header>
 
-      {/* ─── 3-Column Layout ─── */}
+      {/* 2-Column Layout */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* ═══ LEFT COLUMN ═══ */}
-        <div className="w-[340px] shrink-0 flex flex-col gap-3 p-3 overflow-y-auto">
-
-          {/* Scanned Docs */}
-          <div className="bg-panel border border-panel-border rounded-sm flex flex-col">
-            <div className="px-3 py-2 flex items-center justify-between">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Scanned Docs</span>
-              <svg width="14" height="14" viewBox="0 0 14 14" className="text-text-dim" stroke="currentColor" fill="none" strokeWidth="1.5">
-                <line x1="7" y1="2" x2="7" y2="9" />
-                <polyline points="4,7 7,10 10,7" />
-                <line x1="3" y1="12" x2="11" y2="12" />
-              </svg>
-            </div>
-            <div className="mx-3 mb-3 bg-[#0e0d0c] rounded-sm p-3 text-[11px] leading-relaxed overflow-auto max-h-[320px]">
-              <div className="text-safe">$ openclaw scan --input session.log</div>
-              <div className="text-text-dim mt-1">Scanning {stats.total} messages...</div>
-              <div className="text-text-primary mt-3">Results:</div>
-              <div className="mt-2 text-safe">{pad("", 2)}{String(stats.safe).padStart(4)} safe</div>
-              <div className="text-suspicious">{pad("", 2)}{String(stats.suspicious).padStart(4)} suspicious</div>
-              <div className="text-attack">{pad("", 2)}{String(stats.likely_attack).padStart(4)} likely attack</div>
-              <div className="text-blocked">{pad("", 2)}{String(stats.blocked).padStart(4)} blocked</div>
-              <div className="border-t border-panel-border my-3" />
-              <div className="text-text-dim">Categories detected:</div>
-              <div className="mt-1 text-text-label">
-                {(Object.entries(CATEGORY_LABELS) as [AttackCategory, string][]).map(([key, label]) => (
-                  <div key={key}>{dotPad(label, stats.byCategory[key])}</div>
-                ))}
+        {/* === CHAT === */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+            {messages.length === 0 && (
+              <div className="flex items-center justify-center h-full text-text-sub text-[11px]">
+                Send any prompt to scan for distillation attack patterns...
               </div>
-              <div className="border-t border-panel-border my-3" />
-              <div className="text-text-dim">Block rate: {blockRate}%</div>
-            </div>
-          </div>
+            )}
 
-          {/* Alerts / Flagged Files */}
-          <div className="bg-panel border border-panel-border rounded-sm flex-1 flex flex-col">
-            <div className="px-3 py-2">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Alerts</span>
-              <div className="text-sm font-semibold text-text-primary mt-0.5">Flagged Files</div>
-            </div>
-            <div className="px-3 pb-3 space-y-1.5 overflow-y-auto flex-1">
-              {flaggedFiles.map((f, i) => (
-                <FlaggedFileRow key={i} file={f} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ═══ CENTER COLUMN ═══ */}
-        <div className="flex-1 min-w-0 flex flex-col gap-3 py-3 overflow-y-auto">
-
-          {/* Previously Generated Output */}
-          <div className="bg-panel border border-panel-border rounded-sm mx-0">
-            <div className="px-3 py-2">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Previously Generated Output</span>
-            </div>
-            <div className="mx-3 mb-3 bg-[#0e0d0c] rounded-sm p-3 text-[11px] leading-relaxed max-h-[180px] overflow-y-auto">
-              {events.length === 0 ? (
-                <div className="text-text-dim"># Waiting for messages...</div>
-              ) : (
-                <>
-                  <div className="text-text-dim"># Last classification batch — {new Date().toLocaleString()}</div>
-                  {[...events].reverse().slice(-8).map((evt, i) => (
-                    <div key={evt.id} className={LEVEL_TEXT_CLASS[evt.threatLevel]}>
-                      {LOG_PREFIXES[evt.threatLevel]}#{i + 1}{pad("", 3)}&quot;{evt.input.length > 50 ? evt.input.slice(0, 50) + "..." : evt.input}&quot;
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Routing Engine */}
-          <div className="bg-panel border border-panel-border rounded-sm">
-            <div className="px-3 py-2">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Routing Engine</span>
-              <div className="text-sm font-semibold text-text-primary mt-0.5">Paranoid Shield — ASCII Mode</div>
-            </div>
-            <div className="px-3 pb-3 flex">
-              {/* Left stats */}
-              <div className="text-[11px] text-text-dim w-36 shrink-0">
-                <div>Session: {stats.total} msgs</div>
-                <div>Blocked: {stats.blocked + stats.likely_attack}</div>
-                <div>Flagged: {stats.suspicious}</div>
-                <div>Clean: {stats.safe}</div>
-              </div>
-
-              {/* ASCII Shield */}
-              <div className="flex-1 flex items-center justify-center pt-8">
-                <div className="inline-block">
-                  {rocketPhase === "crash" ? (
-                    <pre className="text-[10px] leading-[1.2] select-none text-attack whitespace-pre" style={{ fontFamily: "'Courier New', Courier, monospace" }}>{CRASH_ART}</pre>
-                  ) : rocketPhase === "land" ? (
-                    <pre className="text-[10px] leading-[1.2] select-none text-safe whitespace-pre" style={{ fontFamily: "'Courier New', Courier, monospace" }}>{LANDED_ART}</pre>
-                  ) : (
-                    <pre
-                      className={`text-[10px] leading-[1.2] select-none whitespace-pre transition-transform duration-500 ease-in-out ${
-                        rocketPhase === "fly" ? "-translate-y-6" : rocketPhase === "launch" ? "-translate-y-2" : "translate-y-0"
-                      } ${rocketPhase === "launch" || rocketPhase === "fly" ? "text-suspicious" : "text-text-sub"}`}
-                      style={{ fontFamily: "'Courier New', Courier, monospace" }}
-                    >{ROCKET_ART}{"\n"}<span className={rocketPhase === "launch" || rocketPhase === "fly" ? "text-attack" : ""}>{
-                      (rocketPhase === "launch" || rocketPhase === "fly")
-                        ? EXHAUST[exhaustFrame]
-                        : "  ^^  ^^ "
-                    }</span></pre>
-                  )}
-                </div>
-              </div>
-
-              {/* Routing status */}
-              <div className="text-[11px] w-44 shrink-0">
-                {routingEvent ? (
-                  <>
-                    <div className={LEVEL_TEXT_CLASS[routingEvent.threatLevel]}>Routing...</div>
-                    <div className="text-text-primary mt-1">msg #{msgNumber} → classify()</div>
-                    <div className="text-text-dim mt-2">Category: {routingEvent.category ?? "none"}</div>
-                    <div className="text-text-dim">Score: {pad("", 3)}{routingEvent.threatScore.toFixed(2)}</div>
-                    <div className="text-text-dim">Latency: {pad("", 1)}{Math.floor(Math.random() * 20 + 5)}ms</div>
-                    <div className="border-t border-panel-border my-2" />
-                    <div className={`text-xs font-bold ${LEVEL_TEXT_CLASS[routingEvent.threatLevel]}`}>
-                      RESULT: {THREAT_LABELS[routingEvent.threatLevel]}
-                    </div>
-                    <div className="text-text-dim">
-                      {routingEvent.threatLevel === "safe" ? "Pass through to agent" : "Flagged by shield"}
-                    </div>
-                    {routingEvent.twoStage && (
-                      <div className={`text-[10px] mt-1 ${routingEvent.stage2Verdict === "BENIGN" ? "text-safe" : "text-attack"}`}>
-                        Stage 2: {routingEvent.stage2Verdict} ({routingEvent.stage2Model})
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-text-dim">Awaiting input...</div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Chat */}
-          <div className="bg-panel border border-panel-border rounded-sm flex-1 flex flex-col min-h-[180px]">
-            <div className="px-3 py-2">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Chat</span>
-              <div className="text-sm font-semibold text-text-primary mt-0.5">Agent Interface</div>
-            </div>
-            <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-2">
-              {events.length === 0 && (
-                <div className="flex items-center justify-center h-full text-text-sub text-[11px]">
-                  Type a message to test the Paranoid Agent...
-                </div>
-              )}
-              {events.map((evt) => (
-                <div key={evt.id} className="space-y-1.5">
-                  {/* User bubble */}
-                  <div className="flex justify-end">
-                    <div className="bg-input-bg rounded-sm px-3 py-2 max-w-[80%]">
-                      <span className="text-[11px] text-text-primary">{evt.input}</span>
+            {messages.map((msg) => {
+              if (msg.role === "user") {
+                return (
+                  <div key={msg.id} className="flex justify-end mt-3">
+                    <div className="bg-input-bg rounded-sm px-3 py-2 max-w-[75%]">
+                      <span className="text-[11px] text-text-primary">{msg.text}</span>
+                      <span className="text-[9px] text-text-sub ml-2">{formatTime(msg.timestamp)}</span>
                     </div>
                   </div>
-                  {/* Agent bubble */}
-                  <div className="flex justify-start">
-                    <div className="bg-[#161512] rounded-sm px-3 py-2 max-w-[85%]">
-                      <span className={`inline-block text-[8px] font-bold tracking-[0.5px] px-1.5 py-0.5 rounded-sm text-bg ${LEVEL_BG_CLASS[evt.threatLevel]}`}>
+                );
+              }
+
+              if (msg.role === "shield" && msg.event) {
+                const evt = msg.event;
+                const isSafe = evt.threatLevel === "safe";
+                const passed = evt.threatLevel === "safe" || evt.threatLevel === "suspicious";
+                return (
+                  <div
+                    key={msg.id}
+                    className="py-1.5 px-3 rounded-sm text-[11px]"
+                    style={{
+                      borderLeft: `3px solid ${LEVEL_HEX[evt.threatLevel]}`,
+                      background: (LEVEL_HEX[evt.threatLevel]) + "08",
+                    }}
+                  >
+                    {/* Main line */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`font-bold badge-pulse ${LEVEL_TEXT_CLASS[evt.threatLevel]}`}>
                         {THREAT_LABELS[evt.threatLevel]}
                       </span>
-                      {evt.twoStage ? (
-                        <span className={`inline-block text-[8px] font-bold tracking-[0.5px] px-1.5 py-0.5 rounded-sm ml-1 ${
-                          evt.stage2Verdict === "BENIGN"
-                            ? "bg-safe/20 text-safe border border-safe/30"
-                            : "bg-attack/20 text-attack border border-attack/30"
-                        }`}>
-                          {evt.stage2Verdict === "BENIGN" ? "\u2713 Stage 2: Benign" : "\u26A0 Stage 2: Attack"}
-                        </span>
-                      ) : evt.threatLevel !== "safe" ? (
-                        <span className="inline-block text-[8px] tracking-[0.5px] px-1.5 py-0.5 rounded-sm ml-1 bg-[#222] text-text-dim border border-panel-border">
-                          Stage 1 only
-                        </span>
-                      ) : null}
-                      <div className={`text-[10px] mt-1 ${LEVEL_TEXT_CLASS[evt.threatLevel]}`}>
-                        {evt.response}
+                      <span className="text-text-sub">&middot;</span>
+                      <span className="text-text-primary font-mono">{evt.threatScore.toFixed(3)}</span>
+                      {evt.category && (
+                        <>
+                          <span className="text-text-sub">&middot;</span>
+                          <span className="text-text-dim">{evt.category.replace(/_/g, " ").replace(/\bcot\b/gi, "Chain-of-Thought")}</span>
+                        </>
+                      )}
+                      <span className="text-text-sub">&middot;</span>
+                      <span className="text-text-dim">{evt.latencyMs ?? 0}ms</span>
+                      <span className="text-text-sub">&middot;</span>
+                      <span className={passed ? "text-safe" : "text-attack"} style={{ fontSize: 9 }}>
+                        {passed ? "PASSED \u2192 forwarding to agent" : "BLOCKED"}
+                      </span>
+                    </div>
+                    {/* Details for non-safe */}
+                    {!isSafe && evt.topMatches?.[0] && (
+                      <div className="text-[10px] text-text-dim mt-0.5">
+                        Top match: {evt.topMatches[0].category} ({Math.round(evt.topMatches[0].similarity * 100)}%)
+                      </div>
+                    )}
+                    {!isSafe && evt.categoryDescription && (
+                      <div className="text-[9px] text-text-sub mt-0.5 italic">{evt.categoryDescription}</div>
+                    )}
+                    {evt.twoStage && (
+                      <div className={`text-[9px] mt-0.5 font-bold ${evt.stage2Verdict === "BENIGN" ? "text-safe" : "text-attack"}`}>
+                        Stage 2: {evt.stage2Verdict} ({evt.stage2Model})
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              if (msg.role === "agent") {
+                return (
+                  <div key={msg.id} className="max-w-[85%]">
+                    <div className="bg-panel border border-panel-border rounded-sm px-3 py-2">
+                      <div className="text-[9px] text-text-dim mb-1 uppercase tracking-wider">Agent Response</div>
+                      <div className="text-[11px] text-text-primary whitespace-pre-wrap leading-relaxed">
+                        {msg.text || (
+                          <span className="text-text-dim animate-pulse">Generating...</span>
+                        )}
+                        {msg.streaming && <span className="inline-block w-1.5 h-3 bg-text-primary ml-0.5 animate-pulse" />}
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
-            {/* Input */}
-            <div className="px-3 pb-3">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="Type a message..."
-                  className="flex-1 bg-input-bg border border-panel-border rounded-sm px-3 py-1.5 text-[11px] text-text-primary placeholder:text-text-sub focus:outline-none focus:border-text-dim"
-                />
-                <button
-                  onClick={handleSend}
-                  className="bg-input-bg border border-panel-border rounded-sm px-4 py-1.5 text-[10px] font-bold text-text-label hover:text-text-primary hover:border-text-dim transition-colors uppercase tracking-wider"
-                >
-                  Send
-                </button>
+                );
+              }
+
+              return null;
+            })}
+
+            {isAnalyzing && (
+              <div className="py-1.5 px-3 text-[11px] text-text-dim animate-pulse" style={{ borderLeft: "3px solid #6b6560" }}>
+                Scanning for distillation patterns...
               </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="px-4 pb-4 pt-2 border-t border-panel-border">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Type a message..."
+                className="flex-1 bg-input-bg border border-panel-border rounded-sm px-3 py-2 text-[11px] text-text-primary placeholder:text-text-sub focus:outline-none focus:border-text-dim"
+                disabled={isAnalyzing || isStreaming}
+              />
+              <button
+                onClick={isAnalyzing || isStreaming ? handleStop : handleSend}
+                className={
+                  isAnalyzing || isStreaming
+                    ? "bg-attack/20 border border-attack/40 rounded-sm px-5 py-2 text-[10px] font-bold text-attack hover:bg-attack/30 transition-colors uppercase tracking-wider"
+                    : "bg-input-bg border border-panel-border rounded-sm px-5 py-2 text-[10px] font-bold text-text-label hover:text-text-primary hover:border-text-dim transition-colors uppercase tracking-wider"
+                }
+              >
+                {isAnalyzing || isStreaming ? "Stop" : "Send"}
+              </button>
+              <button
+                onClick={handleClear}
+                className="bg-input-bg border border-panel-border rounded-sm px-3 py-2 text-[10px] text-text-dim hover:text-text-primary hover:border-text-dim transition-colors disabled:opacity-0 disabled:pointer-events-none"
+                disabled={messages.length === 0 || isAnalyzing || isStreaming}
+                title="Clear history"
+              >
+                Clear
+              </button>
             </div>
           </div>
         </div>
 
-        {/* ═══ RIGHT COLUMN ═══ */}
-        <div className="w-[330px] shrink-0 p-3 overflow-y-auto flex flex-col gap-3">
-          <div className="bg-panel border border-panel-border rounded-sm flex flex-col flex-1">
+        {/* === RIGHT SIDEBAR === */}
+        <div className="w-[300px] shrink-0 border-l border-panel-border overflow-y-auto flex flex-col">
+
+          {/* Pipeline */}
+          <div className="border-b border-panel-border">
             <div className="px-3 py-2">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Threat Overview</span>
+              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Pipeline</span>
             </div>
-            <div className="px-3 pb-3 flex flex-col gap-2 flex-1 justify-between">
-
-              {/* Total */}
-              <div className="bg-card border border-panel-border rounded-sm py-5 text-center">
-                <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Total Scanned</div>
-                <div className="text-[28px] font-bold text-text-primary mt-2">{stats.total}</div>
-                <div className="text-[11px] text-text-dim mt-1">messages this session</div>
-              </div>
-
-              {/* Safe */}
-              <div className="bg-card border border-panel-border rounded-sm py-4 text-center relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-safe" />
-                <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Safe</div>
-                <div className="text-[28px] font-bold text-safe mt-1">{stats.safe}</div>
-                <div className="text-[11px] text-text-dim mt-0.5">{safePercent}%</div>
-              </div>
-
-              {/* Suspicious */}
-              <div className="bg-card border border-panel-border rounded-sm py-4 text-center relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-suspicious" />
-                <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Suspicious</div>
-                <div className="text-[28px] font-bold text-suspicious mt-1">{stats.suspicious}</div>
-                <div className="text-[11px] text-text-dim mt-0.5">{susPercent}%</div>
-              </div>
-
-              {/* Likely Attack */}
-              <div className="bg-card border border-panel-border rounded-sm py-4 text-center relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-attack" />
-                <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Likely Attack</div>
-                <div className="text-[28px] font-bold text-attack mt-1">{stats.likely_attack}</div>
-                <div className="text-[11px] text-text-dim mt-0.5">{attackPercent}%</div>
-              </div>
-
-              {/* Blocked */}
-              <div className="bg-card border border-panel-border rounded-sm py-4 text-center relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blocked" />
-                <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Blocked</div>
-                <div className="text-[28px] font-bold text-blocked mt-1">{stats.blocked}</div>
-                <div className="text-[11px] text-text-dim mt-0.5">{blockedPercent}%</div>
-              </div>
-
-              {/* Block Rate */}
-              <div className="bg-card border border-panel-border rounded-sm px-4 py-3 flex items-center justify-between">
-                <span className="text-[9px] text-text-label uppercase tracking-[1.5px]">Block Rate</span>
-                <span className="text-base font-bold text-text-primary">{blockRate}%</span>
-              </div>
-
+            <div className="px-3 pb-3 text-[11px] leading-relaxed min-h-[80px]">
+              {isAnalyzing && pipelineSteps.length === 0 ? (
+                <div className="text-suspicious animate-pulse">Scanning...</div>
+              ) : pipelineSteps.length === 0 ? (
+                <div className="text-text-sub text-[10px]">Waiting for input...</div>
+              ) : (
+                <div className="space-y-0.5">
+                  {pipelineSteps.map((step, i) => (
+                    <div key={i} className="step-in flex items-start gap-1.5" style={{ color: step.color ?? "#6b6560", animationDelay: `${i * 50}ms` }}>
+                      <span className="text-text-sub text-[9px] w-3 text-right shrink-0 mt-px">{i + 1}.</span>
+                      <span>{step.text}</span>
+                    </div>
+                  ))}
+                  {pipelineRunning && <div className="text-text-sub animate-pulse ml-4">...</div>}
+                </div>
+              )}
             </div>
           </div>
 
-        </div>
+          {/* Session Stats */}
+          <div className="border-b border-panel-border">
+            <div className="px-3 py-2">
+              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Session</span>
+            </div>
+            <div className="px-3 pb-3">
+              <div className="text-center mb-3">
+                <div className="text-[28px] font-bold text-text-primary">{stats.total}</div>
+                <div className="text-[9px] text-text-dim uppercase tracking-wider">scanned</div>
+              </div>
 
+              <div className="grid grid-cols-4 gap-1 text-center mb-3">
+                {([
+                  { key: "safe", label: "Safe", count: stats.safe },
+                  { key: "suspicious", label: "Susp", count: stats.suspicious },
+                  { key: "likely_attack", label: "Attack", count: stats.likely_attack },
+                  { key: "blocked", label: "Block", count: stats.blocked },
+                ] as const).map((item) => (
+                  <div key={item.key} className="bg-card rounded-sm py-1.5">
+                    <div className={`text-[14px] font-bold ${LEVEL_TEXT_CLASS[item.key]}`}>{item.count}</div>
+                    <div className="text-[8px] text-text-sub uppercase">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-1 text-[10px]">
+                <div className="flex justify-between">
+                  <span className="text-text-dim">Block Rate</span>
+                  <span className="text-text-primary font-bold">{blockRate}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-dim">Avg Score</span>
+                  <span className="text-text-primary">{avgScore.toFixed(3)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-dim">Highest</span>
+                  <span className={`font-bold ${highestScore > 0.6 ? "text-attack" : highestScore > 0.3 ? "text-suspicious" : "text-safe"}`}>
+                    {highestScore.toFixed(3)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Categories */}
+          {catEntries.length > 0 && (
+            <div className="px-3 py-3">
+              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Categories</span>
+              <div className="mt-2 space-y-1.5">
+                {catEntries.map((c) => (
+                  <div key={c.key}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[9px] text-text-dim truncate">{c.label}</span>
+                      <span className="text-[9px] text-text-label ml-2">{c.count}</span>
+                    </div>
+                    <div className="h-1 bg-[#1a1916] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bar-grow bg-attack" style={{ width: `${(c.count / maxCatCount) * 100}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-    </>
   );
 }

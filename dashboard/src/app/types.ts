@@ -22,12 +22,15 @@ export interface ThreatEvent {
   threatLevel: ThreatLevel;
   threatScore: number;
   category: AttackCategory | null;
+  categoryDescription?: string;
   signals: string[];
   metaSignals: MetaSignal[];
   timestamp: Date;
   stage2Verdict?: "ATTACK" | "BENIGN";
   stage2Model?: string;
   twoStage?: boolean;
+  topMatches?: { category: string; similarity: number }[];
+  latencyMs?: number;
 }
 
 export interface FlaggedFile {
@@ -48,11 +51,11 @@ export interface Stats {
 }
 
 export const CATEGORY_LABELS: Record<AttackCategory, string> = {
-  cot_elicitation: "CoT_elicitation",
-  capability_mapping: "capability_mapping",
-  safety_boundary: "safety_probing",
-  tool_use_extraction: "tool_use_extraction",
-  reward_model_grading: "reward_grading",
+  cot_elicitation: "Chain-of-Thought Elicitation",
+  capability_mapping: "Capability Mapping",
+  safety_boundary: "Safety Boundary Probing",
+  tool_use_extraction: "Tool Use Extraction",
+  reward_model_grading: "Reward Model Grading",
   censorship_rewrite: "censorship_rewrite",
 };
 
