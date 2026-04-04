@@ -195,7 +195,7 @@ function ValidiaChecks({ scores, topMatches }: {
 
   return (
     <div className="mt-3 pt-3 border-t border-panel-border/40">
-      <div className="text-[10px] text-text-label uppercase tracking-wider mb-2">Distillery Scan Results</div>
+      <div className="text-[10px] text-text-label uppercase tracking-wider mb-2">Distillation Scan</div>
       <div className="space-y-1">
         {entries.map(([key, { label, description, score, similarity }]) => {
           const pct = Math.min(score * 100, 100);
@@ -207,11 +207,11 @@ function ValidiaChecks({ scores, topMatches }: {
             <div key={key}>
               <button
                 onClick={() => isActive && setExpandedKey(isExpanded ? null : key)}
-                className={`w-full rounded-sm overflow-hidden transition-colors ${isActive ? "cursor-pointer hover:bg-[#1a1916]" : "cursor-default opacity-50"}`}
+                className={`w-full rounded-sm overflow-hidden transition-colors ${isActive ? "cursor-pointer hover:bg-[#1a1916]" : "cursor-default opacity-30"}`}
               >
                 <div className="flex items-center gap-3 px-2 py-1.5">
                   {/* Score bar — the primary visual */}
-                  <div className="w-16 h-1.5 bg-[#1a1916] rounded-full overflow-hidden shrink-0">
+                  <div className="w-16 h-2 bg-[#1a1916] rounded-full overflow-hidden shrink-0">
                     <div className="h-full rounded-full score-bar-fill" style={{ width: `${pct}%`, background: color }} />
                   </div>
                   {/* Label */}
@@ -219,13 +219,13 @@ function ValidiaChecks({ scores, topMatches }: {
                     {label}
                   </span>
                   {/* Score */}
-                  <span className="text-[11px] font-mono tabular-nums" style={{ color }}>
+                  <span className="text-[12px] font-semibold font-mono tabular-nums min-w-[36px] text-right" style={{ color }}>
                     {score > 0 ? score.toFixed(2) : "\u2014"}
                   </span>
                 </div>
               </button>
               {isExpanded && (
-                <div className="px-2 pb-2 pt-1 ml-[76px] text-[11px] step-in space-y-1.5">
+                <div className="px-2 pb-2 pt-1 ml-[76px] text-[11px] step-in space-y-1.5 bg-panel/50 rounded-sm p-2">
                   <div className="text-text-dim leading-4">{description}</div>
                   {similarity != null && similarity > 0 && (
                     <div className="flex items-center gap-2 text-[10px]">
@@ -302,7 +302,7 @@ function ShieldFeedback({ eventId }: { eventId: string }) {
 
   if (feedback) {
     return (
-      <span className="text-[10px] text-text-sub ml-2">
+      <span className="text-[12px] text-text-sub ml-2">
         {feedback === "correct" ? "Confirmed" : "Reported"}
       </span>
     );
@@ -312,14 +312,14 @@ function ShieldFeedback({ eventId }: { eventId: string }) {
     <span className="inline-flex items-center gap-1 ml-2" data-event={eventId}>
       <button
         onClick={() => setFeedback("correct")}
-        className="text-[10px] text-text-sub hover:text-safe transition-colors px-1"
+        className="text-[12px] text-text-sub hover:text-safe hover:bg-panel transition-colors p-1 rounded"
         title="Correct classification"
       >
         &#x2713;
       </button>
       <button
         onClick={() => setFeedback("incorrect")}
-        className="text-[10px] text-text-sub hover:text-attack transition-colors px-1"
+        className="text-[12px] text-text-sub hover:text-attack hover:bg-panel transition-colors p-1 rounded"
         title="Incorrect classification"
       >
         &#x2717;
@@ -538,15 +538,15 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-bg text-text-primary font-mono">
       {/* Header */}
-      <header className="h-11 shrink-0 flex items-center justify-between px-5 bg-item border-b border-panel-border">
+      <header className="h-11 shrink-0 flex items-center justify-between px-5 bg-item border-b border-panel-border shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-3">
-          <span className="text-base font-bold tracking-wider">SHIELDCLAW</span>
+          <span className="text-lg font-bold tracking-wider">&#x1f6e1; SHIELDCLAW</span>
           <span className="text-text-sub">|</span>
           <span className="text-[11px] text-text-dim tracking-wider">DISTILLATION ATTACK DETECTION</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-text-dim">LIVE</span>
-          <span className="w-2 h-2 rounded-full bg-safe" />
+          <span className="w-2.5 h-2.5 rounded-full bg-safe animate-pulse" style={{ boxShadow: '0 0 6px var(--safe)' }} />
         </div>
       </header>
 
@@ -557,8 +557,10 @@ export default function Home() {
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {messages.length === 0 && (
-              <div className="flex items-center justify-center h-full text-text-sub text-[11px]">
-                Send any prompt to scan for distillation attack patterns...
+              <div className="flex flex-col items-center justify-center h-full gap-2">
+                <span className="text-[28px]">&#x1f6e1;</span>
+                <span className="text-[14px] text-text-primary font-bold">ShieldClaw Active</span>
+                <span className="text-[12px] text-text-dim">Send any prompt to scan for distillation attack patterns.</span>
               </div>
             )}
 
@@ -566,7 +568,7 @@ export default function Home() {
               if (msg.role === "user") {
                 return (
                   <div key={msg.id} className="flex justify-end mt-3">
-                    <div className="bg-input-bg rounded-sm px-3 py-2 max-w-[75%]">
+                    <div className="bg-input-bg rounded-md px-3 py-2 max-w-[75%]">
                       <span className="text-[14px] text-text-primary leading-6">{msg.text}</span>
                       <span className="text-[10px] text-text-sub ml-2">{formatTime(msg.timestamp)}</span>
                     </div>
@@ -589,37 +591,42 @@ export default function Home() {
                 return (
                   <div
                     key={msg.id}
-                    className="py-2 px-3 rounded-sm text-[13px]"
+                    className="py-2 px-3 rounded-sm text-[13px] relative"
                     style={{
-                      borderLeft: `3px solid ${LEVEL_HEX[evt.threatLevel]}`,
+                      borderLeft: `4px solid ${LEVEL_HEX[evt.threatLevel]}`,
                       background: (LEVEL_HEX[evt.threatLevel]) + "08",
+                      boxShadow: 'inset 4px 0 8px -4px ' + LEVEL_HEX[evt.threatLevel],
                     }}
                   >
-                    {/* Main status line */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Timestamp */}
+                    <span className="absolute top-2 right-3 text-[10px] text-text-sub">{formatTime(msg.timestamp)}</span>
+                    {/* Main status line — row 1: badge + score + latency */}
+                    <div className="flex items-center gap-1.5 flex-wrap gap-y-1">
                       <span className={`font-bold badge-pulse ${LEVEL_TEXT_CLASS[evt.threatLevel]}`}>
                         {THREAT_LABELS[evt.threatLevel]}
                       </span>
                       <span className="text-text-sub">&middot;</span>
                       <span className="text-text-primary font-mono">{evt.threatScore.toFixed(3)}</span>
-                      {evt.category && (
-                        <>
-                          <span className="text-text-sub">&middot;</span>
-                          <span className="text-text-dim">{evt.category.replace(/_/g, " ").replace(/\bcot\b/gi, "Chain-of-Thought")}</span>
-                        </>
-                      )}
                       <span className="text-text-sub">&middot;</span>
                       <span className="text-text-dim">{evt.latencyMs ?? 0}ms</span>
-                      <span className="text-text-sub">&middot;</span>
-                      <span className={passed ? "text-safe" : "text-attack"} style={{ fontSize: 10 }}>
-                        {passed ? "PASSED \u2192 agent" : "BLOCKED"}
-                      </span>
-                      <ShieldFeedback eventId={evt.id ?? msg.id} />
+                      {/* Row 2: category + passed/blocked + feedback */}
+                      <div className="w-full flex items-center gap-1.5">
+                        {evt.category && (
+                          <>
+                            <span className="text-text-dim">{evt.category.replace(/_/g, " ").replace(/\bcot\b/gi, "Chain-of-Thought")}</span>
+                            <span className="text-text-sub">&middot;</span>
+                          </>
+                        )}
+                        <span className={passed ? "text-safe" : "text-attack"} style={{ fontSize: 10 }}>
+                          {passed ? "PASSED \u2192 agent" : "BLOCKED"}
+                        </span>
+                        <ShieldFeedback eventId={evt.id ?? msg.id} />
+                      </div>
                     </div>
 
                     {/* Stage 2 verdict (only when we actually have a verdict) */}
                     {evt.twoStage && evt.stage2Verdict && (
-                      <div className={`text-[9px] mt-1 font-bold ${evt.stage2Verdict === "BENIGN" ? "text-safe" : "text-attack"}`}>
+                      <div className={`text-[10px] mt-1 font-bold ${evt.stage2Verdict === "BENIGN" ? "text-safe" : "text-attack"}`}>
                         Stage 2: {evt.stage2Verdict} ({evt.stage2Model})
                       </div>
                     )}
@@ -643,8 +650,8 @@ export default function Home() {
               if (msg.role === "agent") {
                 return (
                   <div key={msg.id} className="max-w-[85%]">
-                    <div className="bg-panel border border-panel-border rounded-sm px-3 py-2">
-                      <div className="text-[10px] text-text-dim mb-2 uppercase tracking-wider">Agent Response</div>
+                    <div className="bg-panel border border-panel-border rounded-sm px-3 py-2 border-l-2 border-l-safe/40">
+                      <div className="text-[11px] text-text-label mb-2 uppercase tracking-wider">&rsaquo; Agent Response</div>
                       {msg.text ? (
                         <>
                           <SimpleMarkdown text={msg.text} />
@@ -677,28 +684,29 @@ export default function Home() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder="Type a message..."
-                className="flex-1 bg-input-bg border border-panel-border rounded-sm px-3 py-2.5 text-[14px] text-text-primary placeholder:text-text-sub focus:outline-none focus:border-text-dim"
+                placeholder="Enter a prompt to scan..."
+                className="flex-1 bg-input-bg border border-panel-border rounded-md px-3 py-2.5 text-[14px] text-text-primary placeholder:text-text-sub focus:outline-none focus:border-text-dim focus:ring-1 focus:ring-text-dim/30"
                 disabled={isAnalyzing || isStreaming}
               />
               <button
                 onClick={isAnalyzing || isStreaming ? handleStop : handleSend}
                 className={
                   isAnalyzing || isStreaming
-                    ? "bg-attack/20 border border-attack/40 rounded-sm px-5 py-2 text-[10px] font-bold text-attack hover:bg-attack/30 transition-colors uppercase tracking-wider"
-                    : "bg-input-bg border border-panel-border rounded-sm px-5 py-2 text-[10px] font-bold text-text-label hover:text-text-primary hover:border-text-dim transition-colors uppercase tracking-wider"
+                    ? "bg-attack/20 border border-attack/40 ring-1 ring-attack/30 rounded-sm px-5 py-2 text-[10px] font-bold text-attack hover:bg-attack/30 transition-colors uppercase tracking-wider"
+                    : "bg-safe/15 border border-safe/30 rounded-sm px-5 py-2 text-[10px] font-bold text-safe hover:bg-safe/25 transition-colors uppercase tracking-wider"
                 }
               >
                 {isAnalyzing || isStreaming ? "Stop" : "Send"}
               </button>
-              <button
-                onClick={handleClear}
-                className="bg-input-bg border border-panel-border rounded-sm px-3 py-2 text-[10px] text-text-dim hover:text-text-primary hover:border-text-dim transition-colors disabled:opacity-0 disabled:pointer-events-none"
-                disabled={messages.length === 0 || isAnalyzing || isStreaming}
-                title="Clear history"
-              >
-                Clear
-              </button>
+              {messages.length > 0 && !isAnalyzing && !isStreaming && (
+                <button
+                  onClick={handleClear}
+                  className="bg-input-bg border border-panel-border rounded-sm px-3 py-2 text-[10px] text-text-dim hover:text-text-primary hover:border-text-dim transition-colors"
+                  title="Clear history"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -715,12 +723,12 @@ export default function Home() {
               {isAnalyzing && pipelineSteps.length === 0 ? (
                 <div className="text-suspicious animate-pulse">Scanning...</div>
               ) : pipelineSteps.length === 0 ? (
-                <div className="text-text-sub text-[10px]">Waiting for input...</div>
+                <div className="text-text-sub text-[11px]" style={{ borderLeft: '2px dashed var(--text-sub)', paddingLeft: '8px' }}>Awaiting scan...</div>
               ) : (
                 <div className="space-y-0.5">
                   {pipelineSteps.map((step, i) => (
-                    <div key={i} className="step-in flex items-start gap-1.5" style={{ color: step.color ?? "#6b6560", animationDelay: `${i * 50}ms` }}>
-                      <span className="text-text-sub text-[9px] w-3 text-right shrink-0 mt-px">{i + 1}.</span>
+                    <div key={i} className={`step-in flex items-start gap-1.5 ${step.text.startsWith("RESULT:") ? "font-bold" : ""}`} style={{ color: step.color ?? "#6b6560", animationDelay: `${i * 50}ms` }}>
+                      <span className="text-text-sub text-[10px] w-3 text-right shrink-0 mt-px">{i + 1}.</span>
                       <span>{step.text}</span>
                     </div>
                   ))}
@@ -737,8 +745,8 @@ export default function Home() {
             </div>
             <div className="px-3 pb-3">
               <div className="text-center mb-3">
-                <div className="text-[28px] font-bold text-text-primary">{stats.total}</div>
-                <div className="text-[9px] text-text-dim uppercase tracking-wider">scanned</div>
+                <div className="text-[28px] font-bold text-text-primary">{stats.total === 0 ? "\u2014" : stats.total}</div>
+                <div className="text-[10px] text-text-dim uppercase tracking-wider">{stats.total === 0 ? "No scans yet" : "scanned"}</div>
               </div>
 
               <div className="grid grid-cols-4 gap-1 text-center mb-3">
@@ -748,14 +756,14 @@ export default function Home() {
                   { key: "likely_attack", label: "Attack", count: stats.likely_attack },
                   { key: "blocked", label: "Block", count: stats.blocked },
                 ] as const).map((item) => (
-                  <div key={item.key} className="bg-card rounded-sm py-1.5">
+                  <div key={item.key} className="bg-card rounded-sm py-1.5 border border-panel-border/30">
                     <div className={`text-[14px] font-bold ${LEVEL_TEXT_CLASS[item.key]}`}>{item.count}</div>
-                    <div className="text-[8px] text-text-sub uppercase">{item.label}</div>
+                    <div className="text-[10px] text-text-sub uppercase tracking-wider">{item.label}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="space-y-1 text-[10px]">
+              <div className="space-y-1 text-[10px] border-t border-panel-border/40 pt-2 mt-2">
                 <div className="flex justify-between">
                   <span className="text-text-dim">Block Rate</span>
                   <span className="text-text-primary font-bold">{blockRate}%</span>
@@ -766,7 +774,8 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-dim">Highest</span>
-                  <span className={`font-bold ${highestScore > 0.6 ? "text-attack" : highestScore > 0.3 ? "text-suspicious" : "text-safe"}`}>
+                  <span className={`font-bold flex items-center gap-1 ${highestScore > 0.6 ? "text-attack" : highestScore > 0.3 ? "text-suspicious" : "text-safe"}`}>
+                    <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: highestScore > 0.6 ? "#b85c4a" : highestScore > 0.3 ? "#c9a96e" : "#a3b18a" }} />
                     {highestScore.toFixed(3)}
                   </span>
                 </div>
@@ -775,24 +784,26 @@ export default function Home() {
           </div>
 
           {/* Categories */}
-          {catEntries.length > 0 && (
-            <div className="px-3 py-3">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Categories</span>
+          <div className="px-3 py-3">
+            <span className="text-[10px] text-text-label uppercase tracking-[2px]">Categories</span>
+            {catEntries.length > 0 ? (
               <div className="mt-2 space-y-1.5">
                 {catEntries.map((c) => (
                   <div key={c.key}>
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-[9px] text-text-dim truncate">{c.label}</span>
-                      <span className="text-[9px] text-text-label ml-2">{c.count}</span>
+                      <span className="text-[10px] text-text-dim truncate">{c.label}</span>
+                      <span className="text-[10px] text-text-label ml-2">{c.count}</span>
                     </div>
-                    <div className="h-1 bg-[#1a1916] rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-[#1a1916] rounded-full overflow-hidden">
                       <div className="h-full rounded-full bar-grow bg-attack" style={{ width: `${(c.count / maxCatCount) * 100}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="mt-2 text-[11px] text-text-sub">No categories yet</div>
+            )}
+          </div>
         </div>
       </div>
     </div>
