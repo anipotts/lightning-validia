@@ -352,5 +352,77 @@ def shield_batch_evaluate(messages: list[str]) -> str:
     return json.dumps(results, indent=2)
 
 
+def run_http(port: int = 8001):
+    """Run as a standalone HTTP API (for Lightning AI Studio / remote access)."""
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
+    # Pre-load model on startup
+    print(f"Loading sentence-transformer model...")
+    _load_model()
+    _load_seeds()
+    print(f"Shield Engine ready. {len(_seed_labels)} fingerprints loaded.")
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length)) if length else {}
+
+            if self.path == "/evaluate":
+                result = evaluate_message(body.get("message", ""))
+                self._respond(200, result)
+            elif self.path == "/batch":
+                msgs = body.get("messages", [])
+                results = [{"message": m[:100], **evaluate_message(m)} for m in msgs]
+                self._respond(200, {"results": results})
+            else:
+                self._respond(404, {"error": "Not found. Use POST /evaluate or /batch"})
+
+        def do_GET(self):
+            if self.path == "/health":
+                self._respond(200, {"status": "ok", "fingerprints": len(_seed_labels), "categories": list(CATEGORIES.keys())})
+            elif self.path == "/":
+                self._respond(200, {
+                    "name": "ShieldClaw",
+                    "description": "Distillation attack detection API",
+                    "endpoints": {
+                        "POST /evaluate": {"body": {"message": "string"}, "returns": "threat assessment"},
+                        "POST /batch": {"body": {"messages": ["string"]}, "returns": "array of assessments"},
+                        "GET /health": "server status",
+                    },
+                })
+            else:
+                self._respond(404, {"error": "Not found"})
+
+        def _respond(self, code, data):
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode())
+
+        def do_OPTIONS(self):
+            self._respond(200, {})
+
+        def log_message(self, format, *args):
+            pass  # Suppress request logging noise
+
+    server = HTTPServer(("0.0.0.0", port), Handler)
+    print(f"ShieldClaw HTTP API running on http://0.0.0.0:{port}")
+    print(f"  POST /evaluate  — evaluate a single message")
+    print(f"  POST /batch     — evaluate multiple messages")
+    print(f"  GET  /health    — server status")
+    server.serve_forever()
+
+
 if __name__ == "__main__":
-    mcp.run()
+    import sys
+    if "--http" in sys.argv:
+        port = 8001
+        for i, arg in enumerate(sys.argv):
+            if arg == "--port" and i + 1 < len(sys.argv):
+                port = int(sys.argv[i + 1])
+        run_http(port)
+    else:
+        mcp.run()
