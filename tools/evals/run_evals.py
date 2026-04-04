@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run comprehensive evals against the ShieldClaw live API."""
+"""Run comprehensive evals against the OpenProof live API."""
 
 import json
 import os
@@ -10,7 +10,7 @@ from typing import Any
 import httpx
 
 API_BASE = os.environ.get(
-    "SHIELDCLAW_API",
+    "OPENPROOF_API",
     "https://8001-01kncga6xqm17e747jd1fzhypy.cloudspaces.litng.ai",
 )
 EVAL_DIR = Path(__file__).parent

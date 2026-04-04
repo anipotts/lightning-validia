@@ -1,12 +1,12 @@
-# ShieldClaw Demo (3 min)
+# OpenProof Demo (3 min)
 
 ## Setup
 ```bash
 # Terminal 1 — Shield Engine
-python mcp-server/server.py --http --port 8001
+python tools/mcp-server/server.py --http --port 8001
 
 # Terminal 2 — Dashboard
-cd dashboard && npm run dev
+cd apps/web && npm run dev
 ```
 
 ## Demo Prompts

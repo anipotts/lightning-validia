@@ -10,6 +10,7 @@ import {
   INITIAL_STATS,
 } from "./types";
 import { analyzePrompt, analyzePromptAPI } from "./analyzer";
+import { PipelineView } from "../components/pipeline/PipelineView";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -540,7 +541,7 @@ export default function Home() {
       {/* Header */}
       <header className="h-11 shrink-0 flex items-center justify-between px-5 bg-item border-b border-panel-border shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-3">
-          <span className="text-lg font-bold tracking-wider">&#x1f6e1; SHIELDCLAW</span>
+          <span className="text-lg font-bold tracking-wider">&#x1f6e1; OPENPROOF</span>
           <span className="text-text-sub">|</span>
           <span className="text-[11px] text-text-dim tracking-wider">DISTILLATION ATTACK DETECTION</span>
         </div>
@@ -559,7 +560,7 @@ export default function Home() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full gap-2">
                 <span className="text-[28px]">&#x1f6e1;</span>
-                <span className="text-[14px] text-text-primary font-bold">ShieldClaw Active</span>
+                <span className="text-[14px] text-text-primary font-bold">OpenProof Active</span>
                 <span className="text-[12px] text-text-dim">Send any prompt to scan for distillation attack patterns.</span>
               </div>
             )}
@@ -715,28 +716,7 @@ export default function Home() {
         <div className="w-[300px] shrink-0 border-l border-panel-border overflow-y-auto flex flex-col">
 
           {/* Pipeline */}
-          <div className="border-b border-panel-border flex-1 flex flex-col">
-            <div className="px-3 py-2">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Pipeline</span>
-            </div>
-            <div className="px-3 pb-3 text-[11px] leading-relaxed flex-1 overflow-y-auto">
-              {isAnalyzing && pipelineSteps.length === 0 ? (
-                <div className="text-suspicious animate-pulse">Scanning...</div>
-              ) : pipelineSteps.length === 0 ? (
-                <div className="text-text-sub text-[11px]" style={{ borderLeft: '2px dashed var(--text-sub)', paddingLeft: '8px' }}>Awaiting scan...</div>
-              ) : (
-                <div className="space-y-0.5">
-                  {pipelineSteps.map((step, i) => (
-                    <div key={i} className={`step-in flex items-start gap-1.5 ${step.text.startsWith("RESULT:") ? "font-bold" : ""}`} style={{ color: step.color ?? "#6b6560", animationDelay: `${i * 50}ms` }}>
-                      <span className="text-text-sub text-[10px] w-3 text-right shrink-0 mt-px">{i + 1}.</span>
-                      <span>{step.text}</span>
-                    </div>
-                  ))}
-                  {pipelineRunning && <div className="text-text-sub animate-pulse ml-4">...</div>}
-                </div>
-              )}
-            </div>
-          </div>
+          <PipelineView steps={pipelineSteps} isRunning={pipelineRunning} isAnalyzing={isAnalyzing} />
 
           {/* Session Stats */}
           <div className="border-b border-panel-border flex-1 flex flex-col">
