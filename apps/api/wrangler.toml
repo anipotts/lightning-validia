@@ -1,0 +1,14 @@
+name = "openproof-api"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "openproof"
+database_id = ""
+
+[vars]
+GHOST_API_URL = "http://localhost:8000"
