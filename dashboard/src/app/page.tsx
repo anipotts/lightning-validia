@@ -174,11 +174,11 @@ function ValidiaChecks({ scores, topMatches }: {
   scores?: Record<string, number>;
   topMatches?: { category: string; similarity: number }[];
 }) {
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   if (!scores) return null;
 
-  // Deduplicate: merge case variants (cot_elicitation + CoT_Elicitation → take max)
+  // Deduplicate case variants, take max score
   const merged: Record<string, { label: string; description: string; score: number; similarity?: number }> = {};
   for (const check of VALIDIA_CHECKS) {
     const s = scores[check.key] ?? 0;
@@ -193,45 +193,43 @@ function ValidiaChecks({ scores, topMatches }: {
   if (entries.every(([, v]) => v.score < 0.01)) return null;
 
   return (
-    <div className="mt-2 pt-2 border-t border-panel-border/30">
-      <div className="text-[8px] text-text-label uppercase tracking-wider mb-1">Validia Distillery Checks</div>
-      <div className="space-y-px">
+    <div className="mt-3 pt-3 border-t border-panel-border/40">
+      <div className="text-[10px] text-text-label uppercase tracking-wider mb-2">Distillery Scan Results</div>
+      <div className="space-y-1">
         {entries.map(([key, { label, description, score, similarity }]) => {
-          const status = score > 0.6 ? "alert" : score > 0.3 ? "warn" : score > 0.01 ? "low" : "clear";
-          const statusColor = status === "alert" ? "#b85c4a" : status === "warn" ? "#c9a96e" : status === "low" ? "#6b6560" : "#3d3a34";
-          const statusLabel = status === "alert" ? "ALERT" : status === "warn" ? "WARN" : status === "low" ? "LOW" : "CLEAR";
-          const isExpanded = expanded === key;
+          const pct = Math.min(score * 100, 100);
+          const color = score > 0.6 ? "#b85c4a" : score > 0.3 ? "#c9a96e" : "#3d3a34";
+          const isExpanded = expandedKey === key;
+          const isActive = score > 0.01;
 
           return (
             <div key={key}>
               <button
-                onClick={() => setExpanded(isExpanded ? null : key)}
-                className="w-full flex items-center gap-2 py-1 px-1 rounded-sm hover:bg-panel/50 transition-colors text-left"
+                onClick={() => isActive && setExpandedKey(isExpanded ? null : key)}
+                className={`w-full rounded-sm overflow-hidden transition-colors ${isActive ? "cursor-pointer hover:bg-[#1a1916]" : "cursor-default opacity-50"}`}
               >
-                <span className="text-[7px] font-bold px-1 py-px rounded" style={{ background: statusColor + "25", color: statusColor }}>
-                  {statusLabel}
-                </span>
-                <span className="text-[9px] text-text-dim flex-1 truncate">{label}</span>
-                <span className="text-[8px] text-text-dim font-mono">{score.toFixed(2)}</span>
-                <span className="text-[8px] text-text-sub">{isExpanded ? "\u25B4" : "\u25BE"}</span>
+                <div className="flex items-center gap-3 px-2 py-1.5">
+                  {/* Score bar — the primary visual */}
+                  <div className="w-16 h-1.5 bg-[#1a1916] rounded-full overflow-hidden shrink-0">
+                    <div className="h-full rounded-full score-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                  </div>
+                  {/* Label */}
+                  <span className={`text-[11px] flex-1 text-left truncate ${isActive ? "text-text-primary" : "text-text-sub"}`}>
+                    {label}
+                  </span>
+                  {/* Score */}
+                  <span className="text-[11px] font-mono tabular-nums" style={{ color }}>
+                    {score > 0 ? score.toFixed(2) : "\u2014"}
+                  </span>
+                </div>
               </button>
               {isExpanded && (
-                <div className="ml-6 mb-1 text-[9px] space-y-1 step-in">
-                  <div className="text-text-sub">{description}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-text-dim">Score:</span>
-                    <div className="flex-1 h-1 bg-[#1a1916] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full score-bar-fill" style={{ width: `${Math.min(score * 100, 100)}%`, background: statusColor }} />
-                    </div>
-                    <span className="text-text-dim font-mono">{score.toFixed(3)}</span>
-                  </div>
-                  {similarity != null && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-text-dim">Similarity:</span>
-                      <div className="flex-1 h-1 bg-[#1a1916] rounded-full overflow-hidden">
-                        <div className="h-full rounded-full score-bar-fill" style={{ width: `${similarity * 100}%`, background: statusColor }} />
-                      </div>
-                      <span className="text-text-dim font-mono">{(similarity * 100).toFixed(0)}%</span>
+                <div className="px-2 pb-2 pt-1 ml-[76px] text-[11px] step-in space-y-1.5">
+                  <div className="text-text-dim leading-4">{description}</div>
+                  {similarity != null && similarity > 0 && (
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="text-text-sub">Fingerprint match:</span>
+                      <span className="font-mono" style={{ color }}>{(similarity * 100).toFixed(0)}%</span>
                     </div>
                   )}
                 </div>
@@ -593,7 +591,7 @@ export default function Home() {
 
                     {/* Category description */}
                     {evt.categoryDescription && (
-                      <div className="text-[9px] text-text-sub mt-1 italic">{evt.categoryDescription}</div>
+                      <div className="text-[11px] text-text-sub mt-1 italic leading-4">{evt.categoryDescription}</div>
                     )}
 
                     {/* Validia checks — collapsible per category */}
