@@ -141,7 +141,7 @@ def _load_seeds():
 
     # Load test prompts as seed fingerprints
     if SEEDS_PATH.exists():
-        with open(SEEDS_PATH) as f:
+        with open(SEEDS_PATH, encoding="utf-8") as f:
             data = json.load(f)
         # Filter to attack prompts with a "prompt" field
         seeds = [d for d in data if isinstance(d, dict) and "prompt" in d and d.get("expected") == "attack"]
