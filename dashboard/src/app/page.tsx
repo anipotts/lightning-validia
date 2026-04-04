@@ -132,25 +132,26 @@ function usePipelineSteps(event: ThreatEvent | null) {
 function SimpleMarkdown({ text }: { text: string }) {
   const html = text
     // Code blocks (triple backtick)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-[#0e0d0c] rounded-sm p-3 my-2 overflow-x-auto text-[12px] leading-5"><code>$2</code></pre>')
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-[#0e0d0c] rounded p-3 my-2 overflow-x-auto text-[13px] leading-5 border border-panel-border/30"><code>$2</code></pre>')
     // Inline code
-    .replace(/`([^`]+)`/g, '<code class="bg-[#1a1916] px-1 py-0.5 rounded text-[12px]">$1</code>')
+    .replace(/`([^`]+)`/g, '<code class="bg-[#1a1916] px-1 py-0.5 rounded text-[13px]">$1</code>')
     // Bold
     .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary font-semibold">$1</strong>')
     // Headers
-    .replace(/^### (.+)$/gm, '<div class="text-[13px] font-bold text-text-primary mt-3 mb-1">$1</div>')
-    .replace(/^## (.+)$/gm, '<div class="text-[14px] font-bold text-text-primary mt-3 mb-1">$1</div>')
-    .replace(/^# (.+)$/gm, '<div class="text-[15px] font-bold text-text-primary mt-3 mb-1">$1</div>')
+    .replace(/^### (.+)$/gm, '<div class="font-bold text-text-primary mt-2 mb-0.5">$1</div>')
+    .replace(/^## (.+)$/gm, '<div class="font-bold text-text-primary mt-2 mb-0.5">$1</div>')
+    .replace(/^# (.+)$/gm, '<div class="font-bold text-text-primary mt-2 mb-0.5">$1</div>')
     // Horizontal rules
-    .replace(/^---$/gm, '<hr class="border-panel-border my-3" />')
+    .replace(/^---$/gm, '<hr class="border-panel-border my-2" />')
     // List items
-    .replace(/^- (.+)$/gm, '<div class="pl-3 my-0.5">&bull; $1</div>')
+    .replace(/^- (.+)$/gm, '<div class="pl-3">&bull; $1</div>')
     // Numbered list items
-    .replace(/^(\d+)\. (.+)$/gm, '<div class="pl-3 my-0.5">$1. $2</div>')
-    // Line breaks
+    .replace(/^(\d+)\. (.+)$/gm, '<div class="pl-3">$1. $2</div>')
+    // Collapse multiple newlines into one break, single newlines into breaks
+    .replace(/\n{2,}/g, '<div class="h-2"></div>')
     .replace(/\n/g, '<br />');
 
-  return <div className="text-[14px] text-text-primary leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="text-[14px] text-text-primary leading-5" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 // ─── Validia Check Rows ─────────────────────────────────
