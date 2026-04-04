@@ -1,14 +1,14 @@
 """
-ShieldClaw MCP Server — distillation attack detection + supply chain security.
+OpenProof MCP Server — distillation attack detection + supply chain security.
 
 Install:
     pip install -r requirements.txt
 
 Use with Claude Code:
-    claude mcp add shieldclaw -- python /path/to/server.py
+    claude mcp add openproof -- python /path/to/server.py
 
 Use with any MCP client:
-    mcp add shieldclaw -- python /path/to/server.py
+    mcp add openproof -- python /path/to/server.py
 """
 
 import json
@@ -603,7 +603,7 @@ async def ghost_stats() -> dict:
 # MCP Server
 # ---------------------------------------------------------------------------
 
-mcp = FastMCP("shieldclaw")
+mcp = FastMCP("openproof")
 
 
 @mcp.tool()
@@ -681,7 +681,7 @@ def run_http(port: int = 8001):
                 self._respond(200, {"status": "ok", "fingerprints": len(_seed_labels), "categories": list(CATEGORIES.keys())})
             elif self.path == "/":
                 self._respond(200, {
-                    "name": "ShieldClaw",
+                    "name": "OpenProof",
                     "description": "Distillation attack detection API",
                     "endpoints": {
                         "POST /evaluate": {"body": {"message": "string"}, "returns": "two-stage threat assessment"},
@@ -709,7 +709,7 @@ def run_http(port: int = 8001):
             pass  # Suppress request logging noise
 
     server = HTTPServer(("0.0.0.0", port), Handler)
-    print(f"ShieldClaw HTTP API running on http://0.0.0.0:{port}")
+    print(f"OpenProof HTTP API running on http://0.0.0.0:{port}")
     print(f"  POST /evaluate        — two-stage eval (embeddings + Claude verify)")
     print(f"  POST /evaluate-simple — stage-1 only (no Claude API needed)")
     print(f"  POST /batch           — two-stage batch eval")

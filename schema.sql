@@ -1,4 +1,4 @@
--- ShieldClaw Postgres Schema
+-- OpenProof Postgres Schema
 -- Run this on Lightning AI Studio's Postgres instance
 
 CREATE TABLE IF NOT EXISTS threat_events (

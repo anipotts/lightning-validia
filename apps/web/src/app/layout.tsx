@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ShieldClaw — Distillation Attack Detection",
+  title: "OpenProof — Distillation Attack Detection",
   description: "Real-time defense against model extraction, chain-of-thought harvesting, and capability probing attacks on LLMs.",
 };
 

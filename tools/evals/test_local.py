@@ -3,7 +3,7 @@ Local eval runner — tests the shield engine directly without a server.
 No HTTP needed, just imports evaluate_message() and runs all eval prompts.
 
 Usage:
-    cd shieldclaw
+    cd openproof
     pip install numpy sentence-transformers
     python evals/test_local.py
 """

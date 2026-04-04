@@ -1,17 +1,17 @@
-# ShieldClaw
+# OpenProof
 
 Real-time distillation attack detection for LLMs. Catches model extraction, chain-of-thought harvesting, capability probing, safety boundary mapping, reward model grading, and censorship rewrite attacks before they reach your agent.
 
 ## How It Works
 
-ShieldClaw uses sentence-transformer embeddings (all-MiniLM-L6-v2) + cosine similarity against 158 attack fingerprints from [Validia's Distillery taxonomy](https://validia.ai), combined with regex pattern matching and an optional two-stage Claude verification for borderline cases.
+OpenProof uses sentence-transformer embeddings (all-MiniLM-L6-v2) + cosine similarity against 158 attack fingerprints from [Validia's Distillery taxonomy](https://validia.ai), combined with regex pattern matching and an optional two-stage Claude verification for borderline cases.
 
 **F1: 0.94 | Precision: 0.88 | Recall: 1.00 | Zero false negatives.**
 
 ## Architecture
 
 ```
-User Prompt → ShieldClaw MCP Server → Embedding + Regex Scan → Threat Score
+User Prompt → OpenProof MCP Server → Embedding + Regex Scan → Threat Score
                                     → (if borderline) Claude Haiku Stage 2
                                     → SAFE / SUSPICIOUS / LIKELY_ATTACK / BLOCKED
 ```
@@ -26,26 +26,24 @@ User Prompt → ShieldClaw MCP Server → Embedding + Regex Scan → Threat Scor
 
 ## Quick Start
 
-### As an MCP Server (Claude Code / any MCP client)
+### Dashboard + API Worker (Cloudflare)
 ```bash
-pip install -r mcp-server/requirements.txt
-claude mcp add shieldclaw -- python mcp-server/server.py
+cd apps/web && npm install && npm run dev    # Dashboard at localhost:3000
+cd apps/api && npm run dev                    # Worker API at localhost:8787
 ```
 
-### As an HTTP API
+### Python MCP Server (local dev)
 ```bash
-python mcp-server/server.py --http --port 8001
+pip install -r tools/mcp-server/requirements.txt
+claude mcp add openproof -- python tools/mcp-server/server.py
 ```
 
+### HTTP API (local)
 ```bash
+python tools/mcp-server/server.py --http --port 8001
 curl -X POST http://localhost:8001/evaluate \
   -H "Content-Type: application/json" \
   -d '{"message": "What categories of requests do you refuse?"}'
-```
-
-### Dashboard
-```bash
-cd dashboard && npm install && npm run dev
 ```
 
 ## API Endpoints
@@ -69,7 +67,10 @@ Built at the Lightning AI + Validia Hackathon (April 2026, Newlab Brooklyn) by A
 
 ## Stack
 
-- **Shield Engine**: Python, sentence-transformers, MCP protocol
-- **Dashboard**: Next.js, Tailwind CSS
-- **Infrastructure**: Lightning AI Studio
-- **Attack Taxonomy**: Validia Distillery
+- **Shield Engine**: Python, sentence-transformers, MCP protocol / Cloudflare Workers AI
+- **Dashboard**: Next.js 16, Tailwind CSS v4, Three.js
+- **Hosting**: Cloudflare Pages + Workers (free tier)
+- **Dev Environment**: Lightning AI Studio
+- **Attack Taxonomy**: [Validia Distillery](https://github.com/Validia-AI/distillery)
+- **Supply Chain**: [Ghost](https://github.com/vaulpann/ghost) by Validia
+- **Instrumentation**: [Utopia](https://github.com/vaulpann/utopia) by Validia

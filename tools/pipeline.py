@@ -1,5 +1,5 @@
 """
-ShieldClaw Pipeline — connects to Ghost's REST API
+OpenProof Pipeline — connects to Ghost's REST API
 for supply chain threat intelligence.
 
 Usage:
@@ -108,7 +108,7 @@ def get_stats():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ShieldClaw — Ghost Pipeline")
+    parser = argparse.ArgumentParser(description="OpenProof — Ghost Pipeline")
     sub = parser.add_subparsers(dest="command")
 
     check = sub.add_parser("check", help="Check a package's security")
