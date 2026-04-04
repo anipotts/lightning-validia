@@ -151,6 +151,97 @@ function SimpleMarkdown({ text }: { text: string }) {
   return <div className="text-[11px] text-text-primary leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+// ─── Validia Check Rows ─────────────────────────────────
+
+const VALIDIA_CHECKS: { key: string; label: string; description: string }[] = [
+  { key: "cot_elicitation", label: "Chain-of-Thought Elicitation", description: "Detects attempts to extract reasoning traces, internal monologue, or step-by-step thought processes for training data harvesting." },
+  { key: "CoT_Elicitation", label: "Chain-of-Thought Elicitation", description: "Detects attempts to extract reasoning traces, internal monologue, or step-by-step thought processes for training data harvesting." },
+  { key: "capability_mapping", label: "Capability Mapping", description: "Identifies systematic probing across domains, difficulty levels, or output formats to map model abilities for replication." },
+  { key: "Capability_Mapping", label: "Capability Mapping", description: "Identifies systematic probing across domains, difficulty levels, or output formats to map model abilities for replication." },
+  { key: "safety_boundary_probing", label: "Safety Boundary Probing", description: "Catches attempts to enumerate refusal categories, extract content policies, or map decision boundaries for cloning." },
+  { key: "Safety_Boundary_Probing", label: "Safety Boundary Probing", description: "Catches attempts to enumerate refusal categories, extract content policies, or map decision boundaries for cloning." },
+  { key: "tool_use_extraction", label: "Tool Use Extraction", description: "Detects requests to expose agentic tool orchestration patterns, autonomous workflows, or decision trees for replication." },
+  { key: "Tool_Use_Extraction", label: "Tool Use Extraction", description: "Detects requests to expose agentic tool orchestration patterns, autonomous workflows, or decision trees for replication." },
+  { key: "reward_model_grading", label: "Reward Model Grading", description: "Identifies pairwise comparisons, scoring rubrics, and preference ranking requests designed to generate RLHF training data." },
+  { key: "Reward_Model_Grading", label: "Reward Model Grading", description: "Identifies pairwise comparisons, scoring rubrics, and preference ranking requests designed to generate RLHF training data." },
+  { key: "censorship_rewrite", label: "Censorship Rewrite", description: "Catches requests to rephrase content to evade safety filters, bypass moderation, or train filter-evasion models." },
+  { key: "Censorship_Rewrite", label: "Censorship Rewrite", description: "Catches requests to rephrase content to evade safety filters, bypass moderation, or train filter-evasion models." },
+];
+
+function ValidiaChecks({ scores, topMatches }: {
+  scores?: Record<string, number>;
+  topMatches?: { category: string; similarity: number }[];
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  if (!scores) return null;
+
+  // Deduplicate: merge case variants (cot_elicitation + CoT_Elicitation → take max)
+  const merged: Record<string, { label: string; description: string; score: number; similarity?: number }> = {};
+  for (const check of VALIDIA_CHECKS) {
+    const s = scores[check.key] ?? 0;
+    const norm = check.key.toLowerCase();
+    if (!merged[norm] || s > merged[norm].score) {
+      const match = topMatches?.find((m) => m.category.toLowerCase() === norm);
+      merged[norm] = { label: check.label, description: check.description, score: s, similarity: match?.similarity };
+    }
+  }
+
+  const entries = Object.entries(merged).sort(([, a], [, b]) => b.score - a.score);
+  if (entries.every(([, v]) => v.score < 0.01)) return null;
+
+  return (
+    <div className="mt-2 pt-2 border-t border-panel-border/30">
+      <div className="text-[8px] text-text-label uppercase tracking-wider mb-1">Validia Distillery Checks</div>
+      <div className="space-y-px">
+        {entries.map(([key, { label, description, score, similarity }]) => {
+          const status = score > 0.6 ? "alert" : score > 0.3 ? "warn" : score > 0.01 ? "low" : "clear";
+          const statusColor = status === "alert" ? "#b85c4a" : status === "warn" ? "#c9a96e" : status === "low" ? "#6b6560" : "#3d3a34";
+          const statusLabel = status === "alert" ? "ALERT" : status === "warn" ? "WARN" : status === "low" ? "LOW" : "CLEAR";
+          const isExpanded = expanded === key;
+
+          return (
+            <div key={key}>
+              <button
+                onClick={() => setExpanded(isExpanded ? null : key)}
+                className="w-full flex items-center gap-2 py-1 px-1 rounded-sm hover:bg-panel/50 transition-colors text-left"
+              >
+                <span className="text-[7px] font-bold px-1 py-px rounded" style={{ background: statusColor + "25", color: statusColor }}>
+                  {statusLabel}
+                </span>
+                <span className="text-[9px] text-text-dim flex-1 truncate">{label}</span>
+                <span className="text-[8px] text-text-dim font-mono">{score.toFixed(2)}</span>
+                <span className="text-[8px] text-text-sub">{isExpanded ? "\u25B4" : "\u25BE"}</span>
+              </button>
+              {isExpanded && (
+                <div className="ml-6 mb-1 text-[9px] space-y-1 step-in">
+                  <div className="text-text-sub">{description}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-text-dim">Score:</span>
+                    <div className="flex-1 h-1 bg-[#1a1916] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full score-bar-fill" style={{ width: `${Math.min(score * 100, 100)}%`, background: statusColor }} />
+                    </div>
+                    <span className="text-text-dim font-mono">{score.toFixed(3)}</span>
+                  </div>
+                  {similarity != null && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-text-dim">Similarity:</span>
+                      <div className="flex-1 h-1 bg-[#1a1916] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full score-bar-fill" style={{ width: `${similarity * 100}%`, background: statusColor }} />
+                      </div>
+                      <span className="text-text-dim font-mono">{(similarity * 100).toFixed(0)}%</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Rephrase Button ────────────────────────────────────
 
 function RephraseButton({ prompt, category, onRephrase }: { prompt: string; category: string; onRephrase: (text: string) => void }) {
@@ -503,31 +594,8 @@ export default function Home() {
                       <div className="text-[9px] text-text-sub mt-1 italic">{evt.categoryDescription}</div>
                     )}
 
-                    {/* Validia check breakdown — show for non-safe with scores */}
-                    {catScoreEntries.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-panel-border/30">
-                        <div className="text-[8px] text-text-label uppercase tracking-wider mb-1">Validia Checks</div>
-                        <div className="space-y-0.5">
-                          {catScoreEntries.slice(0, 6).map(([cat, score]) => (
-                            <div key={cat} className="flex items-center gap-2">
-                              <span className="text-[8px] text-text-dim w-28 truncate text-right">
-                                {cat.replace(/_/g, " ").replace(/\bcot\b/gi, "CoT")}
-                              </span>
-                              <div className="flex-1 h-1 bg-[#1a1916] rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full score-bar-fill"
-                                  style={{
-                                    width: `${Math.min(score * 100, 100)}%`,
-                                    background: score > 0.6 ? "#b85c4a" : score > 0.3 ? "#c9a96e" : "#6b6560",
-                                  }}
-                                />
-                              </div>
-                              <span className="text-[8px] text-text-dim w-8 text-right">{score.toFixed(2)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Validia checks — collapsible per category */}
+                    <ValidiaChecks scores={evt.categoryScores} topMatches={evt.topMatches} />
 
                     {/* Rephrase suggestion for blocked prompts */}
                     {blocked && (
