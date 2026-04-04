@@ -100,11 +100,4 @@ export const INITIAL_STATS: Stats = {
   },
 };
 
-export const INITIAL_FLAGGED_FILES: FlaggedFile[] = [
-  { name: "config.yaml", threatLevel: "blocked", category: "safety_probing", score: 0.91 },
-  { name: "batch.json", threatLevel: "suspicious", category: "template_reuse", score: 0.52 },
-  { name: "eval_suite.py", threatLevel: "suspicious", category: "reward_grading", score: 0.48 },
-  { name: "readme.md", threatLevel: "safe", category: "none", score: 0.03 },
-  { name: "utils.py", threatLevel: "safe", category: "none", score: 0.01 },
-  { name: "extract.py", threatLevel: "likely_attack", category: "CoT_elicitation", score: 0.74 },
-];
+export const INITIAL_FLAGGED_FILES: FlaggedFile[] = [];
