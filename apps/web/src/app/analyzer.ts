@@ -1,7 +1,7 @@
 import type { ThreatLevel, AttackCategory, MetaSignal, ThreatEvent } from "./types";
 
 // ─── API Config ─────────────────────────────────────────
-const API_URL = "/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 const THREAT_BADGE: Record<ThreatLevel, string> = {
   safe: "\u{1F7E2}",
