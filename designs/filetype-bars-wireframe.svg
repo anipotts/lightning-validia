@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 520" fill="none">
+  <defs>
+    <!-- Hover fill gradients (shown at partial to illustrate the fill mechanic) -->
+    <linearGradient id="fillSafe" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a3b18a" stop-opacity="0.25"/>
+      <stop offset="60%" stop-color="#a3b18a" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#a3b18a" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fillSus" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c9a96e" stop-opacity="0.25"/>
+      <stop offset="45%" stop-color="#c9a96e" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fillAttack" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#b85c4a" stop-opacity="0.25"/>
+      <stop offset="30%" stop-color="#b85c4a" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#b85c4a" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 10px edge fades -->
+    <linearGradient id="fadeL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeR" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </linearGradient>
+    <linearGradient id="fadeT" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    text { font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace; }
+    .bar { fill: #1a1916; stroke: #3d3a34; stroke-width: 1; }
+    .bar-hover { opacity: 0; }
+    .label { fill: #8a8478; font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; }
+    .sublabel { fill: #6b6560; font-size: 8px; }
+    .count { fill: #e8e0d4; font-size: 14px; font-weight: 700; }
+    .severity-indicator { stroke-width: 1; }
+    .anno { fill: #c9a96e; font-size: 8px; font-style: italic; }
+    .anno-line { stroke: #c9a96e; stroke-width: 0.5; stroke-dasharray: 3 2; }
+    .dim { fill: #4a4640; font-size: 7px; }
+  </style>
+
+  <!-- Background -->
+  <rect width="400" height="520" fill="#0a0a0a"/>
+
+  <!-- Title -->
+  <text x="20" y="24" fill="#e8e0d4" font-size="11" font-weight="700" letter-spacing="1">FLAGGED CONTENT BARS</text>
+  <text x="20" y="38" fill="#6b6560" font-size="8" letter-spacing="0.5">Bottom-right dashboard component — hover interaction wireframe</text>
+
+  <!-- ============================================ -->
+  <!-- ANNOTATION: How the hover fill works          -->
+  <!-- ============================================ -->
+  <text x="20" y="62" class="anno">On hover: bar fills L→R with severity color</text>
+  <text x="20" y="74" class="anno">3D asset rotates Y-axis via CSS/GSAP</text>
+
+  <!-- ============================================ -->
+  <!-- BAR 1: DOCUMENTS (PDF, TXT, MD, JSON)         -->
+  <!-- ============================================ -->
+
+  <!-- Bar background -->
+  <rect x="16" y="92" width="368" height="120" class="bar" rx="2"/>
+
+  <!-- Hover fill overlay (shown partially to illustrate) -->
+  <rect x="17" y="93" width="366" height="118" fill="url(#fillSafe)" rx="1"/>
+
+  <!-- Left severity strip -->
+  <rect x="16" y="92" width="4" height="120" fill="#a3b18a" rx="0"/>
+
+  <!-- 3D Document Asset (isometric stack of pages) -->
+  <g transform="translate(80, 118)">
+    <!-- Back page (offset) -->
+    <polygon points="8,-18 52,-24 52,20 8,26" fill="#2a2824" stroke="#3d3a34" stroke-width="0.75"/>
+    <!-- Middle page -->
+    <polygon points="4,-14 48,-20 48,24 4,30" fill="#1e1d1a" stroke="#3d3a34" stroke-width="0.75"/>
+    <!-- Front page -->
+    <polygon points="0,-10 44,-16 44,28 0,34" fill="#141210" stroke="#5a5650" stroke-width="1"/>
+    <!-- Text lines on front page -->
+    <line x1="6" y1="-4" x2="32" y2="-7" stroke="#6b6560" stroke-width="1"/>
+    <line x1="6" y1="2" x2="28" y2="0" stroke="#4a4640" stroke-width="0.75"/>
+    <line x1="6" y1="8" x2="36" y2="5" stroke="#4a4640" stroke-width="0.75"/>
+    <line x1="6" y1="14" x2="24" y2="12" stroke="#4a4640" stroke-width="0.75"/>
+    <!-- Corner fold -->
+    <polygon points="32,-16 44,-16 44,-6" fill="#1a1916" stroke="#5a5650" stroke-width="0.5"/>
+    <!-- File type badges -->
+    <rect x="-4" y="36" width="16" height="8" fill="#3d3a34" rx="1"/>
+    <text x="4" y="42.5" fill="#8a8478" font-size="5" text-anchor="middle">.pdf</text>
+    <rect x="14" y="36" width="14" height="8" fill="#3d3a34" rx="1"/>
+    <text x="21" y="42.5" fill="#8a8478" font-size="5" text-anchor="middle">.txt</text>
+    <rect x="30" y="36" width="16" height="8" fill="#3d3a34" rx="1"/>
+    <text x="38" y="42.5" fill="#8a8478" font-size="5" text-anchor="middle">.md</text>
+  </g>
+
+  <!-- Rotation arrow annotation -->
+  <path d="M 140 130 A 14 14 0 1 1 140 144" fill="none" stroke="#c9a96e" stroke-width="0.5" stroke-dasharray="2 1"/>
+  <polygon points="140,144 137,139 143,140" fill="#c9a96e"/>
+  <text x="156" y="140" class="dim">rotateY on hover</text>
+
+  <!-- Labels -->
+  <text x="190" y="118" class="label">FLAGGED DOCUMENTS</text>
+  <text x="190" y="132" class="sublabel">.pdf .txt .md .json .yaml .csv</text>
+  <text x="190" y="154" class="count">24</text>
+  <text x="210" y="154" class="sublabel">files scanned</text>
+  <text x="190" y="168" fill="#a3b18a" font-size="9">18 safe</text>
+  <text x="240" y="168" fill="#c9a96e" font-size="9">4 sus</text>
+  <text x="278" y="168" fill="#b85c4a" font-size="9">2 flagged</text>
+  <!-- Severity dots -->
+  <text x="190" y="188" class="sublabel">severity color changes bar fill:</text>
+  <rect x="190" y="192" width="30" height="4" fill="#a3b18a" rx="0"/>
+  <rect x="224" y="192" width="30" height="4" fill="#c9a96e" rx="0"/>
+  <rect x="258" y="192" width="30" height="4" fill="#b85c4a" rx="0"/>
+  <rect x="292" y="192" width="30" height="4" fill="#8a3a2e" rx="0"/>
+
+  <!-- ============================================ -->
+  <!-- BAR 2: IMAGES                                 -->
+  <!-- ============================================ -->
+
+  <rect x="16" y="228" width="368" height="120" class="bar" rx="2"/>
+  <rect x="17" y="229" width="366" height="118" fill="url(#fillSus)" rx="1"/>
+  <rect x="16" y="228" width="4" height="120" fill="#c9a96e" rx="0"/>
+
+  <!-- 3D Image Asset (isometric polaroid/frame stack) -->
+  <g transform="translate(72, 254)">
+    <!-- Back frame -->
+    <polygon points="14,-22 62,-28 62,24 14,30" fill="#2a2824" stroke="#3d3a34" stroke-width="0.75"/>
+    <!-- Middle frame -->
+    <polygon points="7,-16 55,-22 55,30 7,36" fill="#1e1d1a" stroke="#3d3a34" stroke-width="0.75"/>
+    <!-- Front frame (polaroid style) -->
+    <polygon points="0,-10 48,-16 48,36 0,42" fill="#141210" stroke="#5a5650" stroke-width="1"/>
+    <!-- Image area inside frame -->
+    <polygon points="4,-6 44,-12 44,22 4,28" fill="#1a1916" stroke="#3d3a34" stroke-width="0.5"/>
+    <!-- Mountain/landscape in image -->
+    <polygon points="4,28 16,8 24,18 32,2 44,22 44,28" fill="#2a2824" stroke="none"/>
+    <polygon points="4,28 20,14 32,28" fill="#3d3a34" stroke="none"/>
+    <!-- Sun circle -->
+    <circle cx="36" cy="0" r="4" fill="#c9a96e" opacity="0.4"/>
+    <!-- Label strip at bottom of polaroid -->
+    <rect x="0" y="30" width="48" height="12" fill="#141210"/>
+    <text x="24" y="39" fill="#6b6560" font-size="5" text-anchor="middle">IMG_0847.png</text>
+    <!-- File type badges -->
+    <rect x="0" y="46" width="16" height="8" fill="#3d3a34" rx="1"/>
+    <text x="8" y="52.5" fill="#8a8478" font-size="5" text-anchor="middle">.png</text>
+    <rect x="18" y="46" width="16" height="8" fill="#3d3a34" rx="1"/>
+    <text x="26" y="52.5" fill="#8a8478" font-size="5" text-anchor="middle">.jpg</text>
+    <rect x="36" y="46" width="16" height="8" fill="#3d3a34" rx="1"/>
+    <text x="44" y="52.5" fill="#8a8478" font-size="5" text-anchor="middle">.svg</text>
+  </g>
+
+  <!-- Rotation arrow -->
+  <path d="M 140 266 A 14 14 0 1 1 140 280" fill="none" stroke="#c9a96e" stroke-width="0.5" stroke-dasharray="2 1"/>
+  <polygon points="140,280 137,275 143,276" fill="#c9a96e"/>
+  <text x="156" y="276" class="dim">rotateY on hover</text>
+
+  <!-- Labels -->
+  <text x="190" y="254" class="label">FLAGGED IMAGES</text>
+  <text x="190" y="268" class="sublabel">.png .jpg .jpeg .svg .webp .gif</text>
+  <text x="190" y="290" class="count">12</text>
+  <text x="210" y="290" class="sublabel">files scanned</text>
+  <text x="190" y="304" fill="#a3b18a" font-size="9">8 safe</text>
+  <text x="234" y="304" fill="#c9a96e" font-size="9">3 sus</text>
+  <text x="272" y="304" fill="#b85c4a" font-size="9">1 flagged</text>
+
+  <!-- ============================================ -->
+  <!-- BAR 3: VIDEO                                  -->
+  <!-- ============================================ -->
+
+  <rect x="16" y="364" width="368" height="120" class="bar" rx="2"/>
+  <rect x="17" y="365" width="366" height="118" fill="url(#fillAttack)" rx="1"/>
+  <rect x="16" y="364" width="4" height="120" fill="#b85c4a" rx="0"/>
+
+  <!-- 3D Video Asset (isometric film reel / clapperboard) -->
+  <g transform="translate(68, 388)">
+    <!-- Film strip back -->
+    <polygon points="16,-16 68,-22 68,32 16,38" fill="#2a2824" stroke="#3d3a34" stroke-width="0.75"/>
+    <!-- Sprocket holes left -->
+    <rect x="18" y="-10" width="4" height="6" fill="#0a0a0a" rx="0.5"/>
+    <rect x="18" y="2" width="4" height="6" fill="#0a0a0a" rx="0.5"/>
+    <rect x="18" y="14" width="4" height="6" fill="#0a0a0a" rx="0.5"/>
+    <rect x="18" y="26" width="4" height="6" fill="#0a0a0a" rx="0.5"/>
+    <!-- Sprocket holes right -->
+    <rect x="62" y="-16" width="4" height="6" fill="#0a0a0a" rx="0.5"/>
+    <rect x="62" y="-4" width="4" height="6" fill="#0a0a0a" rx="0.5"/>
+    <rect x="62" y="8" width="4" height="6" fill="#0a0a0a" rx="0.5"/>
+    <rect x="62" y="20" width="4" height="6" fill="#0a0a0a" rx="0.5"/>
+    <!-- Main frame (front) -->
+    <polygon points="0,-6 52,-12 52,38 0,44" fill="#141210" stroke="#5a5650" stroke-width="1"/>
+    <!-- Video frame content area -->
+    <polygon points="6,-2 46,-6 46,30 6,34" fill="#1a1916" stroke="#3d3a34" stroke-width="0.5"/>
+    <!-- Play button triangle -->
+    <polygon points="20,8 20,24 34,16" fill="#b85c4a" opacity="0.6"/>
+    <!-- Clapperboard top -->
+    <polygon points="0,-6 52,-12 52,-22 0,-16" fill="#1e1d1a" stroke="#5a5650" stroke-width="0.75"/>
+    <!-- Clapper stripes -->
+    <line x1="8" y1="-14" x2="18" y2="-16" stroke="#5a5650" stroke-width="1.5"/>
+    <line x1="22" y1="-16" x2="32" y2="-18" stroke="#5a5650" stroke-width="1.5"/>
+    <line x1="36" y1="-18" x2="46" y2="-20" stroke="#5a5650" stroke-width="1.5"/>
+    <!-- Timecode -->
+    <text x="10" y="42" fill="#6b6560" font-size="5">00:04:21</text>
+    <!-- File type badges -->
+    <rect x="0" y="48" width="16" height="8" fill="#3d3a34" rx="1"/>
+    <text x="8" y="54.5" fill="#8a8478" font-size="5" text-anchor="middle">.mp4</text>
+    <rect x="18" y="48" width="16" height="8" fill="#3d3a34" rx="1"/>
+    <text x="26" y="54.5" fill="#8a8478" font-size="5" text-anchor="middle">.mov</text>
+    <rect x="36" y="48" width="16" height="8" fill="#3d3a34" rx="1"/>
+    <text x="44" y="54.5" fill="#8a8478" font-size="5" text-anchor="middle">.webm</text>
+  </g>
+
+  <!-- Rotation arrow -->
+  <path d="M 140 402 A 14 14 0 1 1 140 416" fill="none" stroke="#c9a96e" stroke-width="0.5" stroke-dasharray="2 1"/>
+  <polygon points="140,416 137,411 143,412" fill="#c9a96e"/>
+  <text x="156" y="412" class="dim">rotateY on hover</text>
+
+  <!-- Labels -->
+  <text x="190" y="390" class="label">FLAGGED VIDEO</text>
+  <text x="190" y="404" class="sublabel">.mp4 .mov .webm .avi</text>
+  <text x="190" y="426" class="count">6</text>
+  <text x="206" y="426" class="sublabel">files scanned</text>
+  <text x="190" y="440" fill="#a3b18a" font-size="9">3 safe</text>
+  <text x="234" y="440" fill="#c9a96e" font-size="9">1 sus</text>
+  <text x="272" y="440" fill="#b85c4a" font-size="9">2 flagged</text>
+
+  <!-- ============================================ -->
+  <!-- INTERACTION SPEC ANNOTATIONS                  -->
+  <!-- ============================================ -->
+
+  <line x1="16" y1="498" x2="384" y2="498" stroke="#3d3a34" stroke-width="0.5"/>
+  <text x="20" y="512" class="dim">INTERACTION: hover bar → fill L→R (GSAP 0.4s ease) → 3D asset rotateY 360 (Motion spring)</text>
+
+  <!-- 10px edge gradients -->
+  <rect x="0" y="0" width="10" height="520" fill="url(#fadeL)"/>
+  <rect x="390" y="0" width="10" height="520" fill="url(#fadeR)"/>
+  <rect x="0" y="0" width="400" height="10" fill="url(#fadeT)"/>
+  <rect x="0" y="510" width="400" height="10" fill="url(#fadeB)"/>
+</svg>

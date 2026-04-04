@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   type ThreatEvent,
   type Stats,
@@ -12,8 +12,146 @@ import {
   INITIAL_STATS,
   INITIAL_FLAGGED_FILES,
 } from "./types";
-import { analyzePrompt } from "./analyzer";
+import { analyzePrompt, analyzePromptAPI } from "./analyzer";
 import { useGateway } from "./useGateway";
+import dynamic from "next/dynamic";
+
+const FlaggedContentBars = dynamic(() => import("./FlaggedContentBars"), { ssr: false });
+const FileIcon3D = dynamic(() => import("./FlaggedContentBars").then((m) => ({ default: m.FileIcon3D })), { ssr: false });
+
+// ─── Launch Animation ──────────────────────────────────
+
+function Sprocket({ size = 120, color = "#c9a96e" }: { size?: number; color?: string }) {
+  const teeth = 8;
+  const outerR = size / 2;
+  const innerR = outerR * 0.72;
+  const toothH = outerR * 0.18;
+  const toothW = 0.22; // radians half-width
+
+  // Build sprocket gear path
+  const points: string[] = [];
+  for (let i = 0; i < teeth; i++) {
+    const angle = (i / teeth) * Math.PI * 2;
+    // Tooth outer corners
+    const a1 = angle - toothW;
+    const a2 = angle + toothW;
+    const r1 = innerR;
+    const r2 = outerR + toothH;
+    // Valley before tooth
+    const va = angle - Math.PI / teeth;
+    points.push(`${outerR + r1 * Math.cos(va)},${outerR + r1 * Math.sin(va)}`);
+    // Tooth rise
+    points.push(`${outerR + r2 * Math.cos(a1)},${outerR + r2 * Math.sin(a1)}`);
+    points.push(`${outerR + r2 * Math.cos(a2)},${outerR + r2 * Math.sin(a2)}`);
+  }
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* Gear body */}
+      <polygon
+        points={points.join(" ")}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      {/* Inner circle */}
+      <circle
+        cx={outerR}
+        cy={outerR}
+        r={innerR * 0.45}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+      />
+      {/* Center dot */}
+      <circle cx={outerR} cy={outerR} r={4} fill={color} />
+    </svg>
+  );
+}
+
+function LaunchAnimation({ onComplete }: { onComplete: () => void }) {
+  const [dots, setDots] = useState("");
+  const [phase, setPhase] = useState<"spin" | "done" | "fade">("spin");
+  const [opacity, setOpacity] = useState(1);
+
+  useEffect(() => {
+    const dotsInterval = setInterval(() => {
+      setDots((d) => (d.length >= 3 ? "" : d + "."));
+    }, 400);
+
+    const doneTimeout = setTimeout(() => {
+      setPhase("done");
+      clearInterval(dotsInterval);
+    }, 2400);
+
+    return () => {
+      clearInterval(dotsInterval);
+      clearTimeout(doneTimeout);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (phase === "done") {
+      const t = setTimeout(() => setPhase("fade"), 500);
+      return () => clearTimeout(t);
+    }
+    if (phase === "fade") {
+      setOpacity(0);
+      const t = setTimeout(onComplete, 500);
+      return () => clearTimeout(t);
+    }
+  }, [phase, onComplete]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center font-mono"
+      style={{
+        background: "#0a0a0a",
+        opacity,
+        transition: "opacity 0.5s ease-out",
+      }}
+    >
+      {/* Rotating sprocket */}
+      <div
+        style={{
+          animation: phase === "spin" ? "sprocket-spin 2s linear infinite" : "none",
+          transition: "filter 0.3s",
+          filter: phase === "done" ? "drop-shadow(0 0 12px #a3b18a)" : "none",
+        }}
+      >
+        <Sprocket size={120} color={phase === "done" ? "#a3b18a" : "#c9a96e"} />
+      </div>
+
+      {/* Status text */}
+      <div className="mt-8 text-center">
+        {phase === "done" ? (
+          <span className="text-xs tracking-[4px] uppercase" style={{ color: "#a3b18a" }}>
+            INITIALIZED
+          </span>
+        ) : (
+          <span className="text-xs tracking-[4px] uppercase" style={{ color: "#8a8478" }}>
+            INITIALIZING{dots}
+          </span>
+        )}
+      </div>
+
+      {/* Bottom branding */}
+      <div className="absolute bottom-8 text-center">
+        <div className="text-[10px] tracking-[4px] uppercase" style={{ color: "#3d3a34" }}>
+          SHIELDCLAW
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes sprocket-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 // ─── Helpers ────────────────────────────────────────────
 
@@ -48,49 +186,53 @@ const LEVEL_TEXT_CLASS: Record<string, string> = {
 
 type RocketPhase = "idle" | "launch" | "fly" | "land" | "crash";
 
-const ROCKET_ART = `   |
-  /|\\
- / | \\
-|  S  |
-|  H  |
-|  I  |
-|  E  |
-|  L  |
-|  D  |
-\\_____/
- || ||`;
+const ROCKET_ART =
+  "    |    \n" +
+  "   /|\\   \n" +
+  "  / | \\  \n" +
+  " |  S  | \n" +
+  " |  H  | \n" +
+  " |  I  | \n" +
+  " |  E  | \n" +
+  " |  L  | \n" +
+  " |  D  | \n" +
+  " \\_____/ \n" +
+  "  || ||  ";
 
+// Every line is exactly 9 chars, matching ROCKET_ART width
 const EXHAUST = [
-  " )| |(  \n  \\~~/  \n   \\/   ",
-  "(| | )( \n  (~~)  \n   \\/   ",
-  " )| |(  \n  )~~(  \n   \\/   ",
+  " )|| ||( \n  \\~~~~/ \n   \\~~/  \n    \\/   ",
+  " (|| ||) \n  (~~~~) \n   (~~)  \n    \\/   ",
+  " )|| ||( \n  )~~~~( \n   )~~(  \n    \\/   ",
 ];
 
-const CRASH_ART = `     *
-  \\  |  /
- -- 💥 --
-  /  |  \\
-    / \\
-  /_ _ _\\
- |  S H  |
- | I E L |
- |__D____|
-  //  \\\\
-~~~~~~~~~~~`;
+const CRASH_ART =
+  "      *      \n" +
+  "   \\  |  /   \n" +
+  "  -- * * --  \n" +
+  "   /  |  \\   \n" +
+  "     / \\     \n" +
+  "   /_ _ _\\   \n" +
+  "  |  S H  |  \n" +
+  "  | I E L |  \n" +
+  "  |__D____|  \n" +
+  "   //  \\\\    \n" +
+  " ~~~~~~~~~~~ ";
 
-const LANDED_ART = `   |
-  /|\\
- / | \\
-|  S  |
-|  H  |
-|  I  |
-|  E  |
-|  L  |
-|  D  |
-\\_____/
- || ||
-=======
-  ✓`;
+const LANDED_ART =
+  "    |    \n" +
+  "   /|\\   \n" +
+  "  / | \\  \n" +
+  " |  S  | \n" +
+  " |  H  | \n" +
+  " |  I  | \n" +
+  " |  E  | \n" +
+  " |  L  | \n" +
+  " |  D  | \n" +
+  " \\_____/ \n" +
+  "  || ||  \n" +
+  " ======= \n" +
+  "    OK   ";
 
 const LEVEL_BG_CLASS: Record<string, string> = {
   safe: "bg-safe",
@@ -99,9 +241,76 @@ const LEVEL_BG_CLASS: Record<string, string> = {
   blocked: "bg-blocked",
 };
 
+// ─── Flagged File Row ───────────────────────────────────
+
+const SEVERITY_HEX: Record<string, string> = {
+  safe: "#a3b18a",
+  suspicious: "#c9a96e",
+  likely_attack: "#b85c4a",
+  blocked: "#8a3a2e",
+};
+
+function FlaggedFileRow({ file }: { file: FlaggedFile }) {
+  const [hovered, setHovered] = useState(false);
+  const color = SEVERITY_HEX[file.threatLevel];
+
+  return (
+    <div
+      className="rounded-sm flex items-stretch relative"
+      style={{ overflow: "visible" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Background + severity flood fill */}
+      <div
+        className="absolute inset-0 rounded-sm"
+        style={{
+          background: hovered
+            ? `linear-gradient(90deg, ${color}35, ${color}10)`
+            : "#12110f",
+          border: hovered ? `1px solid ${color}50` : "1px solid transparent",
+          transition: "all 0.3s ease",
+        }}
+      />
+
+      {/* Left severity strip — glows on hover */}
+      <div
+        className="w-1.5 shrink-0 rounded-l-sm relative z-[1]"
+        style={{
+          background: color,
+          boxShadow: hovered ? `0 0 8px ${color}80` : "none",
+          transition: "box-shadow 0.3s",
+        }}
+      />
+
+      {/* Content */}
+      <div className="flex items-center gap-2 px-2 py-2 relative z-[1]">
+        {/* 3D icon — bursts upward on hover */}
+        <div
+          style={{
+            transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            transform: hovered ? "translateY(-8px) scale(1.25)" : "translateY(0) scale(1)",
+          }}
+        >
+          <FileIcon3D filename={file.name} isHovered={hovered} />
+        </div>
+        <div>
+          <div className={`text-[10px] font-bold ${LEVEL_TEXT_CLASS[file.threatLevel]}`}>
+            {THREAT_LABELS[file.threatLevel]}
+          </div>
+          <div className="text-text-dim text-[11px]">
+            {file.name} — {file.category} ({file.score.toFixed(2)})
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ───────────────────────────────────────────────
 
 export default function Home() {
+  const [launched, setLaunched] = useState(false);
   const [events, setEvents] = useState<ThreatEvent[]>([]);
   const [stats, setStats] = useState<Stats>(INITIAL_STATS);
   const [input, setInput] = useState("");
@@ -112,6 +321,8 @@ export default function Home() {
   const [exhaustFrame, setExhaustFrame] = useState(0);
   const [pendingEvent, setPendingEvent] = useState<ThreatEvent | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const handleLaunchComplete = useCallback(() => setLaunched(true), []);
 
   const gateway = useGateway(useWs);
 
@@ -141,7 +352,7 @@ export default function Home() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [events]);
 
-  function handleSend() {
+  async function handleSend() {
     const text = input.trim();
     if (!text) return;
 
@@ -150,23 +361,32 @@ export default function Home() {
       return;
     }
 
-    const event = analyzePrompt(text);
-    setPendingEvent(event);
+    setInput("");
     setRocketPhase("launch");
-
-    // launch → fly → land/crash
     setTimeout(() => setRocketPhase("fly"), 400);
+
+    // Try real API first, fall back to local
+    let event;
+    try {
+      event = await analyzePromptAPI(text);
+    } catch {
+      event = analyzePrompt(text);
+    }
+
+    setPendingEvent(event);
+
+    // land/crash after fly
     setTimeout(() => {
       const isSafe = event.threatLevel === "safe";
       setRocketPhase(isSafe ? "land" : "crash");
       setEvents((prev) => [...prev, event]);
       setStats((prev) => updateStats(prev, event));
       setRoutingEvent(event);
-    }, 1200);
+    }, 800);
     setTimeout(() => {
       setRocketPhase("idle");
       setPendingEvent(null);
-    }, 3000);
+    }, 2600);
     setInput("");
   }
 
@@ -182,6 +402,8 @@ export default function Home() {
   const msgNumber = stats.total;
 
   return (
+    <>
+    {!launched && <LaunchAnimation onComplete={handleLaunchComplete} />}
     <div className="flex flex-col h-screen bg-bg text-text-primary font-mono">
       {/* ─── Header ─── */}
       <header className="h-11 shrink-0 flex items-center justify-between px-5 bg-item border-b border-panel-border">
@@ -248,17 +470,7 @@ export default function Home() {
             </div>
             <div className="px-3 pb-3 space-y-1.5 overflow-y-auto flex-1">
               {flaggedFiles.map((f, i) => (
-                <div key={i} className="bg-item rounded-sm flex items-stretch overflow-hidden">
-                  <div className={`w-1.5 shrink-0 ${LEVEL_BG_CLASS[f.threatLevel]}`} />
-                  <div className="px-3 py-2">
-                    <div className={`text-[10px] font-bold ${LEVEL_TEXT_CLASS[f.threatLevel]}`}>
-                      {THREAT_LABELS[f.threatLevel]}
-                    </div>
-                    <div className="text-text-dim text-[11px]">
-                      {f.name} — {f.category} ({f.score.toFixed(2)})
-                    </div>
-                  </div>
-                </div>
+                <FlaggedFileRow key={i} file={f} />
               ))}
             </div>
           </div>
@@ -304,27 +516,25 @@ export default function Home() {
               </div>
 
               {/* ASCII Shield */}
-              <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
-                {rocketPhase === "crash" ? (
-                  <pre className="text-[10px] leading-[1.2] select-none text-center text-attack whitespace-pre">{CRASH_ART}</pre>
-                ) : rocketPhase === "land" ? (
-                  <pre className="text-[10px] leading-[1.2] select-none text-center text-safe whitespace-pre">{LANDED_ART}</pre>
-                ) : (
-                  <div
-                    className={`flex flex-col items-center transition-transform duration-500 ease-in-out ${
-                      rocketPhase === "fly" ? "-translate-y-6" : rocketPhase === "launch" ? "-translate-y-2" : "translate-y-0"
-                    }`}
-                  >
-                    <pre className={`text-[10px] leading-[1.2] select-none text-center whitespace-pre transition-colors ${
-                      rocketPhase === "launch" || rocketPhase === "fly" ? "text-suspicious" : "text-text-sub"
-                    }`}>{ROCKET_ART}</pre>
-                    {(rocketPhase === "launch" || rocketPhase === "fly") ? (
-                      <pre className="text-[10px] leading-[1.2] select-none text-center text-attack whitespace-pre">{EXHAUST[exhaustFrame]}</pre>
-                    ) : (
-                      <pre className="text-[10px] leading-[1.2] select-none text-center text-text-sub whitespace-pre">{" ^^  ^^\n"}</pre>
-                    )}
-                  </div>
-                )}
+              <div className="flex-1 flex items-center justify-center pt-8">
+                <div className="inline-block">
+                  {rocketPhase === "crash" ? (
+                    <pre className="text-[10px] leading-[1.2] select-none text-attack whitespace-pre" style={{ fontFamily: "'Courier New', Courier, monospace" }}>{CRASH_ART}</pre>
+                  ) : rocketPhase === "land" ? (
+                    <pre className="text-[10px] leading-[1.2] select-none text-safe whitespace-pre" style={{ fontFamily: "'Courier New', Courier, monospace" }}>{LANDED_ART}</pre>
+                  ) : (
+                    <pre
+                      className={`text-[10px] leading-[1.2] select-none whitespace-pre transition-transform duration-500 ease-in-out ${
+                        rocketPhase === "fly" ? "-translate-y-6" : rocketPhase === "launch" ? "-translate-y-2" : "translate-y-0"
+                      } ${rocketPhase === "launch" || rocketPhase === "fly" ? "text-suspicious" : "text-text-sub"}`}
+                      style={{ fontFamily: "'Courier New', Courier, monospace" }}
+                    >{ROCKET_ART}{"\n"}<span className={rocketPhase === "launch" || rocketPhase === "fly" ? "text-attack" : ""}>{
+                      (rocketPhase === "launch" || rocketPhase === "fly")
+                        ? EXHAUST[exhaustFrame]
+                        : "  ^^  ^^ "
+                    }</span></pre>
+                  )}
+                </div>
               </div>
 
               {/* Routing status */}
@@ -409,12 +619,12 @@ export default function Home() {
         </div>
 
         {/* ═══ RIGHT COLUMN ═══ */}
-        <div className="w-[330px] shrink-0 p-3 overflow-y-auto">
-          <div className="bg-panel border border-panel-border rounded-sm h-full flex flex-col">
+        <div className="w-[330px] shrink-0 p-3 overflow-y-auto flex flex-col gap-3">
+          <div className="bg-panel border border-panel-border rounded-sm flex flex-col flex-1">
             <div className="px-3 py-2">
               <span className="text-[10px] text-text-label uppercase tracking-[2px]">Threat Overview</span>
             </div>
-            <div className="px-3 pb-3 flex flex-col gap-2 flex-1">
+            <div className="px-3 pb-3 flex flex-col gap-2 flex-1 justify-between">
 
               {/* Total */}
               <div className="bg-card border border-panel-border rounded-sm py-5 text-center">
@@ -463,9 +673,11 @@ export default function Home() {
 
             </div>
           </div>
+
         </div>
 
       </div>
     </div>
+    </>
   );
 }
