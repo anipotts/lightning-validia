@@ -150,7 +150,7 @@ function SimpleMarkdown({ text }: { text: string }) {
     // Line breaks
     .replace(/\n/g, '<br />');
 
-  return <div className="text-[13px] text-text-primary leading-6" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="text-[14px] text-text-primary leading-7" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 // ─── Validia Check Rows ─────────────────────────────────
@@ -267,13 +267,13 @@ function RephraseButton({ prompt, category, onRephrase }: { prompt: string; cate
   if (rephrased) {
     return (
       <div className="mt-2 pt-2 border-t border-panel-border/30">
-        <div className="text-[8px] text-safe uppercase tracking-wider mb-1">Suggested safe version</div>
-        <div className="text-[10px] text-text-primary bg-safe/5 rounded-sm px-2 py-1.5 border border-safe/20">
+        <div className="text-[10px] text-safe uppercase tracking-wider mb-1">Suggested safe version</div>
+        <div className="text-[13px] text-text-primary bg-safe/5 rounded-sm px-3 py-2 border border-safe/20 leading-5">
           {rephrased}
         </div>
         <button
           onClick={() => onRephrase(rephrased)}
-          className="mt-1 text-[9px] text-safe hover:text-text-primary transition-colors"
+          className="mt-1.5 text-[11px] text-safe hover:text-text-primary transition-colors"
         >
           Use this prompt &rarr;
         </button>
@@ -533,7 +533,7 @@ export default function Home() {
                 return (
                   <div key={msg.id} className="flex justify-end mt-3">
                     <div className="bg-input-bg rounded-sm px-3 py-2 max-w-[75%]">
-                      <span className="text-[13px] text-text-primary leading-5">{msg.text}</span>
+                      <span className="text-[14px] text-text-primary leading-6">{msg.text}</span>
                       <span className="text-[10px] text-text-sub ml-2">{formatTime(msg.timestamp)}</span>
                     </div>
                   </div>
@@ -643,7 +643,7 @@ export default function Home() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Type a message..."
-                className="flex-1 bg-input-bg border border-panel-border rounded-sm px-3 py-2.5 text-[13px] text-text-primary placeholder:text-text-sub focus:outline-none focus:border-text-dim"
+                className="flex-1 bg-input-bg border border-panel-border rounded-sm px-3 py-2.5 text-[14px] text-text-primary placeholder:text-text-sub focus:outline-none focus:border-text-dim"
                 disabled={isAnalyzing || isStreaming}
               />
               <button
@@ -672,11 +672,11 @@ export default function Home() {
         <div className="w-[300px] shrink-0 border-l border-panel-border overflow-y-auto flex flex-col">
 
           {/* Pipeline */}
-          <div className="border-b border-panel-border">
+          <div className="border-b border-panel-border flex-1 flex flex-col">
             <div className="px-3 py-2">
               <span className="text-[10px] text-text-label uppercase tracking-[2px]">Pipeline</span>
             </div>
-            <div className="px-3 pb-3 text-[11px] leading-relaxed min-h-[80px]">
+            <div className="px-3 pb-3 text-[11px] leading-relaxed flex-1 overflow-y-auto">
               {isAnalyzing && pipelineSteps.length === 0 ? (
                 <div className="text-suspicious animate-pulse">Scanning...</div>
               ) : pipelineSteps.length === 0 ? (
@@ -696,7 +696,7 @@ export default function Home() {
           </div>
 
           {/* Session Stats */}
-          <div className="border-b border-panel-border">
+          <div className="border-b border-panel-border flex-1 flex flex-col">
             <div className="px-3 py-2">
               <span className="text-[10px] text-text-label uppercase tracking-[2px]">Session</span>
             </div>
