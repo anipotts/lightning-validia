@@ -1,0 +1,24 @@
+[
+  {
+    "package": "axios",
+    "registry": "npm",
+    "risk_score": 9.5,
+    "threat_level": "CRITICAL",
+    "findings": [
+      "New dependency plain-crypto-js@4.2.1 has 0 downloads",
+      "postinstall script downloads external binary",
+      "Network call + process execution detected"
+    ],
+    "latest_version": "1.14.1",
+    "analyzed_at": "2026-04-04T12:00:00Z"
+  },
+  {
+    "package": "lodash",
+    "registry": "npm",
+    "risk_score": 0.1,
+    "threat_level": "SAFE",
+    "findings": [],
+    "latest_version": "4.17.21",
+    "analyzed_at": "2026-04-04T12:00:00Z"
+  }
+]
