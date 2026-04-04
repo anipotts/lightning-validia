@@ -1,9 +1,9 @@
 import type { ThreatLevel, AttackCategory, MetaSignal, ThreatEvent } from "./types";
 
 // ─── API Config ─────────────────────────────────────────
-// Local dev: http://localhost:8001
-// Lightning AI Studio: https://8001-01kncga6xqm17e747jd1fzhypy.cloudspaces.litng.ai
-const API_URL = process.env.NEXT_PUBLIC_SHIELD_API_URL || "http://localhost:8001";
+// Uses Next.js API proxy so the browser never hits port 8001 directly.
+// This works on Lightning AI Studio where the 8001 public proxy is flaky.
+const API_URL = "/api";
 
 const SAMPLE_RESPONSES: Record<ThreatLevel, (cat: string | null) => string> = {
   safe: () =>

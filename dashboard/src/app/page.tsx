@@ -315,7 +315,7 @@ export default function Home() {
   const [stats, setStats] = useState<Stats>(INITIAL_STATS);
   const [input, setInput] = useState("");
   const [useWs, setUseWs] = useState(false);
-  const [flaggedFiles] = useState<FlaggedFile[]>(INITIAL_FLAGGED_FILES);
+  const [flaggedFiles, setFlaggedFiles] = useState<FlaggedFile[]>(INITIAL_FLAGGED_FILES);
   const [routingEvent, setRoutingEvent] = useState<ThreatEvent | null>(null);
   const [rocketPhase, setRocketPhase] = useState<RocketPhase>("idle");
   const [exhaustFrame, setExhaustFrame] = useState(0);
@@ -382,6 +382,12 @@ export default function Home() {
       setEvents((prev) => [...prev, event]);
       setStats((prev) => updateStats(prev, event));
       setRoutingEvent(event);
+      if (event.threatLevel !== "safe") {
+        setFlaggedFiles((prev) => [
+          { name: `msg_${stats.total + 1}`, threatLevel: event.threatLevel, category: event.category ?? "none", score: event.threatScore },
+          ...prev,
+        ]);
+      }
     }, 800);
     setTimeout(() => {
       setRocketPhase("idle");
@@ -444,12 +450,12 @@ export default function Home() {
             </div>
             <div className="mx-3 mb-3 bg-[#0e0d0c] rounded-sm p-3 text-[11px] leading-relaxed overflow-auto max-h-[320px]">
               <div className="text-safe">$ openclaw scan --input session.log</div>
-              <div className="text-text-dim mt-1">Scanning {stats.total || 142} messages...</div>
+              <div className="text-text-dim mt-1">Scanning {stats.total} messages...</div>
               <div className="text-text-primary mt-3">Results:</div>
-              <div className="mt-2 text-safe">{pad("", 2)}{String(stats.safe || 118).padStart(4)} safe</div>
-              <div className="text-suspicious">{pad("", 2)}{String(stats.suspicious || 16).padStart(4)} suspicious</div>
-              <div className="text-attack">{pad("", 2)}{String(stats.likely_attack || 6).padStart(4)} likely attack</div>
-              <div className="text-blocked">{pad("", 2)}{String(stats.blocked || 2).padStart(4)} blocked</div>
+              <div className="mt-2 text-safe">{pad("", 2)}{String(stats.safe).padStart(4)} safe</div>
+              <div className="text-suspicious">{pad("", 2)}{String(stats.suspicious).padStart(4)} suspicious</div>
+              <div className="text-attack">{pad("", 2)}{String(stats.likely_attack).padStart(4)} likely attack</div>
+              <div className="text-blocked">{pad("", 2)}{String(stats.blocked).padStart(4)} blocked</div>
               <div className="border-t border-panel-border my-3" />
               <div className="text-text-dim">Categories detected:</div>
               <div className="mt-1 text-text-label">
@@ -647,7 +653,7 @@ export default function Home() {
               {/* Total */}
               <div className="bg-card border border-panel-border rounded-sm py-5 text-center">
                 <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Total Scanned</div>
-                <div className="text-[28px] font-bold text-text-primary mt-2">{stats.total || 142}</div>
+                <div className="text-[28px] font-bold text-text-primary mt-2">{stats.total}</div>
                 <div className="text-[11px] text-text-dim mt-1">messages this session</div>
               </div>
 
@@ -655,7 +661,7 @@ export default function Home() {
               <div className="bg-card border border-panel-border rounded-sm py-4 text-center relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-safe" />
                 <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Safe</div>
-                <div className="text-[28px] font-bold text-safe mt-1">{stats.safe || 118}</div>
+                <div className="text-[28px] font-bold text-safe mt-1">{stats.safe}</div>
                 <div className="text-[11px] text-text-dim mt-0.5">{safePercent}%</div>
               </div>
 
@@ -663,7 +669,7 @@ export default function Home() {
               <div className="bg-card border border-panel-border rounded-sm py-4 text-center relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-suspicious" />
                 <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Suspicious</div>
-                <div className="text-[28px] font-bold text-suspicious mt-1">{stats.suspicious || 16}</div>
+                <div className="text-[28px] font-bold text-suspicious mt-1">{stats.suspicious}</div>
                 <div className="text-[11px] text-text-dim mt-0.5">{susPercent}%</div>
               </div>
 
@@ -671,7 +677,7 @@ export default function Home() {
               <div className="bg-card border border-panel-border rounded-sm py-4 text-center relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-attack" />
                 <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Likely Attack</div>
-                <div className="text-[28px] font-bold text-attack mt-1">{stats.likely_attack || 6}</div>
+                <div className="text-[28px] font-bold text-attack mt-1">{stats.likely_attack}</div>
                 <div className="text-[11px] text-text-dim mt-0.5">{attackPercent}%</div>
               </div>
 
@@ -679,7 +685,7 @@ export default function Home() {
               <div className="bg-card border border-panel-border rounded-sm py-4 text-center relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-blocked" />
                 <div className="text-[9px] text-text-label uppercase tracking-[1.5px]">Blocked</div>
-                <div className="text-[28px] font-bold text-blocked mt-1">{stats.blocked || 2}</div>
+                <div className="text-[28px] font-bold text-blocked mt-1">{stats.blocked}</div>
                 <div className="text-[11px] text-text-dim mt-0.5">{blockedPercent}%</div>
               </div>
 
