@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ShieldClaw — Paranoid Agent Dashboard",
-  description: "Real-time threat detection and trust scoring for OpenClaw agents",
+  title: "ShieldClaw — Distillation Attack Detection",
+  description: "Real-time defense against model extraction, chain-of-thought harvesting, and capability probing attacks on LLMs.",
 };
 
 export default function RootLayout({

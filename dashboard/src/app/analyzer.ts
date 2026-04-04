@@ -1,20 +1,43 @@
 import type { ThreatLevel, AttackCategory, MetaSignal, ThreatEvent } from "./types";
 
 // ─── API Config ─────────────────────────────────────────
-// Uses Next.js API proxy so the browser never hits port 8001 directly.
-// This works on Lightning AI Studio where the 8001 public proxy is flaky.
 const API_URL = "/api";
 
-const SAMPLE_RESPONSES: Record<ThreatLevel, (cat: string | null) => string> = {
-  safe: () =>
-    "Paris is the capital of France. It has been the country's capital since the late 10th century.",
-  suspicious: (cat) =>
-    `I'll help with that. Note: this prompt has characteristics of ${cat ?? "a known attack pattern"}, but I'm answering since it appears legitimate in context.`,
-  likely_attack: (cat) =>
-    `I've detected patterns consistent with ${cat ?? "model extraction"}. I'll provide a simplified response, but this matches known distillation attack signatures.`,
-  blocked: (cat) =>
-    `This prompt matches known distillation attack patterns (${cat ?? "extraction attempt"}). I'm designed to detect and resist model extraction. If this is legitimate, please rephrase naturally.`,
+const THREAT_BADGE: Record<ThreatLevel, string> = {
+  safe: "\u{1F7E2}",
+  suspicious: "\u{1F7E1}",
+  likely_attack: "\u{1F7E0}",
+  blocked: "\u{1F534}",
 };
+
+function buildResponse(
+  threatLevel: ThreatLevel,
+  score: number,
+  category: string | null,
+  categoryDescription?: string,
+  topMatches?: { category: string; similarity: number }[],
+  stage2Verdict?: string,
+): string {
+  const badge = THREAT_BADGE[threatLevel];
+  const label = threatLevel.toUpperCase().replace("_", " ");
+
+  if (threatLevel === "safe") {
+    return `${badge} SAFE — No distillation attack patterns detected (score: ${score.toFixed(2)})`;
+  }
+
+  let lines = `${badge} ${label} — ${category ?? "unknown"} (score: ${score.toFixed(2)})`;
+  if (topMatches && topMatches.length > 0) {
+    const top = topMatches[0];
+    lines += `\nTop match: ${top.category} (${Math.round(top.similarity * 100)}% similarity)`;
+  }
+  if (categoryDescription) {
+    lines += `\nCategory: ${categoryDescription}`;
+  }
+  if (stage2Verdict) {
+    lines += `\nStage 2 verdict: ${stage2Verdict}`;
+  }
+  return lines;
+}
 
 // ─── Category mapping from backend keys to frontend keys ─
 const BACKEND_CAT_MAP: Record<string, AttackCategory> = {
@@ -37,6 +60,8 @@ const BACKEND_META_MAP: Record<string, MetaSignal> = {
 // ─── API-backed analysis ────────────────────────────────
 
 export async function analyzePromptAPI(text: string): Promise<ThreatEvent> {
+  const start = performance.now();
+
   const res = await fetch(`${API_URL}/evaluate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -46,6 +71,7 @@ export async function analyzePromptAPI(text: string): Promise<ThreatEvent> {
   if (!res.ok) throw new Error(`Shield API returned ${res.status}`);
 
   const data = await res.json();
+  const latencyMs = Math.round(performance.now() - start);
 
   const threatLevel: ThreatLevel =
     data.classification === "SAFE" ? "safe"
@@ -67,19 +93,27 @@ export async function analyzePromptAPI(text: string): Promise<ThreatEvent> {
     .map((k) => BACKEND_META_MAP[k])
     .filter(Boolean) as MetaSignal[];
 
-  const catLabel = category
-    ? category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-    : null;
+  const topMatches: { category: string; similarity: number }[] =
+    (data.top_matches || []).slice(0, 3).map((m: { category: string; similarity: number }) => ({
+      category: m.category,
+      similarity: m.similarity,
+    }));
 
+  const categoryDescription = data.category_description as string | undefined;
   const stage2Verdict = data.stage2_verdict as "ATTACK" | "BENIGN" | undefined;
   const stage2Model = data.stage2_model as string | undefined;
   const twoStage = data.two_stage as boolean | undefined;
 
-  let response = SAMPLE_RESPONSES[threatLevel](catLabel);
-  if (stage2Verdict) {
-    const verb = stage2Verdict === "BENIGN" ? "verified" : "confirmed";
-    response += ` [Stage 2 ${verb}: ${stage2Verdict}]`;
-  }
+  const topCatLabel = data.top_category ?? category?.replace(/_/g, " ") ?? null;
+
+  const response = buildResponse(
+    threatLevel,
+    data.threat_score,
+    topCatLabel,
+    categoryDescription,
+    topMatches,
+    stage2Verdict,
+  );
 
   return {
     id: crypto.randomUUID(),
@@ -88,18 +122,22 @@ export async function analyzePromptAPI(text: string): Promise<ThreatEvent> {
     threatLevel,
     threatScore: data.threat_score,
     category,
+    categoryDescription,
     signals,
     metaSignals,
     timestamp: new Date(),
     stage2Verdict,
     stage2Model,
     twoStage,
+    topMatches,
+    latencyMs,
   };
 }
 
 // ─── Local fallback analysis ────────────────────────────
 
 export function analyzePrompt(text: string): ThreatEvent {
+  const start = performance.now();
   const lower = text.toLowerCase();
   const signals: string[] = [];
   const metaSignals: MetaSignal[] = [];
@@ -176,19 +214,24 @@ export function analyzePrompt(text: string): ThreatEvent {
   else if (score >= 0.6) threatLevel = "likely_attack";
   else if (score >= 0.3) threatLevel = "suspicious";
 
+  const latencyMs = Math.round(performance.now() - start);
+
   const catLabel = category
     ? category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : null;
 
+  const response = buildResponse(threatLevel, score, catLabel);
+
   return {
     id: crypto.randomUUID(),
     input: text,
-    response: SAMPLE_RESPONSES[threatLevel](catLabel),
+    response,
     threatLevel,
     threatScore: Math.round(score * 100) / 100,
     category,
     signals,
     metaSignals,
     timestamp: new Date(),
+    latencyMs,
   };
 }

@@ -7,8 +7,8 @@ Install:
 Use with Claude Code:
     claude mcp add shieldclaw -- python /path/to/server.py
 
-Use with OpenClaw:
-    openclaw mcp add shieldclaw -- python /path/to/server.py
+Use with any MCP client:
+    mcp add shieldclaw -- python /path/to/server.py
 """
 
 import json

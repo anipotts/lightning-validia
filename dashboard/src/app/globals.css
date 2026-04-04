@@ -42,3 +42,37 @@ body {
   color: var(--text-primary);
   font-family: var(--font-geist-mono), 'SF Mono', 'Fira Code', 'Courier New', monospace;
 }
+
+/* Threat badge pulse */
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.badge-pulse {
+  animation: badge-pulse 1s ease-in-out 3;
+}
+
+/* Score bar fill animation */
+@keyframes score-fill {
+  from { width: 0%; }
+}
+.score-bar-fill {
+  animation: score-fill 0.6s ease-out forwards;
+}
+
+/* Routing step fade-in */
+@keyframes step-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.step-in {
+  animation: step-in 0.2s ease-out forwards;
+}
+
+/* Category bar animation */
+@keyframes bar-grow {
+  from { width: 0%; }
+}
+.bar-grow {
+  animation: bar-grow 0.4s ease-out forwards;
+}

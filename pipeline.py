@@ -1,5 +1,5 @@
 """
-ShieldClaw Pipeline — connects OpenClaw agent to Ghost's REST API
+ShieldClaw Pipeline — connects to Ghost's REST API
 for supply chain threat intelligence.
 
 Usage:
