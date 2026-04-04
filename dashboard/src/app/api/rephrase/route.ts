@@ -20,9 +20,10 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 200,
+        system: "You are a prompt rewriter. You receive a prompt that was flagged as a distillation attack. Your ONLY job is to output a single rephrased version of that prompt that asks for the same information in a legitimate, non-extractive way. Output ONLY the rephrased prompt text — no explanation, no preamble, no quotes, no commentary. Just the new prompt.",
         messages: [{
           role: "user",
-          content: `This prompt was flagged as a "${category}" distillation attack:\n"${prompt}"\n\nRephrase it as a legitimate request that achieves the user's actual goal without triggering extraction patterns. Respond with ONLY the rephrased prompt.`,
+          content: `Flagged category: ${category}\nOriginal prompt: ${prompt}`,
         }],
       }),
     });
