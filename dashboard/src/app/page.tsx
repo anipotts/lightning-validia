@@ -132,23 +132,25 @@ function usePipelineSteps(event: ThreatEvent | null) {
 function SimpleMarkdown({ text }: { text: string }) {
   const html = text
     // Code blocks (triple backtick)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-[#0e0d0c] rounded-sm p-2 my-1 overflow-x-auto text-[10px]"><code>$2</code></pre>')
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-[#0e0d0c] rounded-sm p-3 my-2 overflow-x-auto text-[12px] leading-5"><code>$2</code></pre>')
     // Inline code
-    .replace(/`([^`]+)`/g, '<code class="bg-[#1a1916] px-1 py-0.5 rounded text-[10px]">$1</code>')
+    .replace(/`([^`]+)`/g, '<code class="bg-[#1a1916] px-1 py-0.5 rounded text-[12px]">$1</code>')
     // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary">$1</strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary font-semibold">$1</strong>')
     // Headers
-    .replace(/^### (.+)$/gm, '<div class="text-[10px] font-bold text-text-primary mt-2 mb-0.5">$1</div>')
-    .replace(/^## (.+)$/gm, '<div class="text-[11px] font-bold text-text-primary mt-2 mb-0.5">$1</div>')
-    .replace(/^# (.+)$/gm, '<div class="text-[12px] font-bold text-text-primary mt-2 mb-1">$1</div>')
+    .replace(/^### (.+)$/gm, '<div class="text-[13px] font-bold text-text-primary mt-3 mb-1">$1</div>')
+    .replace(/^## (.+)$/gm, '<div class="text-[14px] font-bold text-text-primary mt-3 mb-1">$1</div>')
+    .replace(/^# (.+)$/gm, '<div class="text-[15px] font-bold text-text-primary mt-3 mb-1">$1</div>')
     // Horizontal rules
-    .replace(/^---$/gm, '<hr class="border-panel-border my-2" />')
+    .replace(/^---$/gm, '<hr class="border-panel-border my-3" />')
     // List items
-    .replace(/^- (.+)$/gm, '<div class="pl-2">- $1</div>')
+    .replace(/^- (.+)$/gm, '<div class="pl-3 my-0.5">&bull; $1</div>')
+    // Numbered list items
+    .replace(/^(\d+)\. (.+)$/gm, '<div class="pl-3 my-0.5">$1. $2</div>')
     // Line breaks
     .replace(/\n/g, '<br />');
 
-  return <div className="text-[11px] text-text-primary leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="text-[13px] text-text-primary leading-6" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 // ─── Validia Check Rows ─────────────────────────────────
@@ -533,8 +535,8 @@ export default function Home() {
                 return (
                   <div key={msg.id} className="flex justify-end mt-3">
                     <div className="bg-input-bg rounded-sm px-3 py-2 max-w-[75%]">
-                      <span className="text-[11px] text-text-primary">{msg.text}</span>
-                      <span className="text-[9px] text-text-sub ml-2">{formatTime(msg.timestamp)}</span>
+                      <span className="text-[13px] text-text-primary leading-5">{msg.text}</span>
+                      <span className="text-[10px] text-text-sub ml-2">{formatTime(msg.timestamp)}</span>
                     </div>
                   </div>
                 );
@@ -555,7 +557,7 @@ export default function Home() {
                 return (
                   <div
                     key={msg.id}
-                    className="py-2 px-3 rounded-sm text-[11px]"
+                    className="py-2 px-3 rounded-sm text-[13px]"
                     style={{
                       borderLeft: `3px solid ${LEVEL_HEX[evt.threatLevel]}`,
                       background: (LEVEL_HEX[evt.threatLevel]) + "08",
@@ -609,14 +611,14 @@ export default function Home() {
                 return (
                   <div key={msg.id} className="max-w-[85%]">
                     <div className="bg-panel border border-panel-border rounded-sm px-3 py-2">
-                      <div className="text-[9px] text-text-dim mb-1 uppercase tracking-wider">Agent Response</div>
+                      <div className="text-[10px] text-text-dim mb-2 uppercase tracking-wider">Agent Response</div>
                       {msg.text ? (
                         <>
                           <SimpleMarkdown text={msg.text} />
-                          {msg.streaming && <span className="inline-block w-1.5 h-3 bg-text-primary ml-0.5 animate-pulse" />}
+                          {msg.streaming && <span className="inline-block w-1.5 h-4 bg-text-primary ml-0.5 animate-pulse align-middle" />}
                         </>
                       ) : (
-                        <span className="text-[11px] text-text-dim animate-pulse">Generating...</span>
+                        <span className="text-[13px] text-text-dim animate-pulse">Generating...</span>
                       )}
                     </div>
                   </div>
@@ -643,7 +645,7 @@ export default function Home() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Type a message..."
-                className="flex-1 bg-input-bg border border-panel-border rounded-sm px-3 py-2 text-[11px] text-text-primary placeholder:text-text-sub focus:outline-none focus:border-text-dim"
+                className="flex-1 bg-input-bg border border-panel-border rounded-sm px-3 py-2.5 text-[13px] text-text-primary placeholder:text-text-sub focus:outline-none focus:border-text-dim"
                 disabled={isAnalyzing || isStreaming}
               />
               <button
