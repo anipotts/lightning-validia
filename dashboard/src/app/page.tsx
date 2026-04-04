@@ -127,6 +127,82 @@ function usePipelineSteps(event: ThreatEvent | null) {
   return { steps, isRunning };
 }
 
+// ─── Markdown Renderer ──────────────────────────────────
+
+function SimpleMarkdown({ text }: { text: string }) {
+  const html = text
+    // Code blocks (triple backtick)
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-[#0e0d0c] rounded-sm p-2 my-1 overflow-x-auto text-[10px]"><code>$2</code></pre>')
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code class="bg-[#1a1916] px-1 py-0.5 rounded text-[10px]">$1</code>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary">$1</strong>')
+    // Headers
+    .replace(/^### (.+)$/gm, '<div class="text-[10px] font-bold text-text-primary mt-2 mb-0.5">$1</div>')
+    .replace(/^## (.+)$/gm, '<div class="text-[11px] font-bold text-text-primary mt-2 mb-0.5">$1</div>')
+    .replace(/^# (.+)$/gm, '<div class="text-[12px] font-bold text-text-primary mt-2 mb-1">$1</div>')
+    // Horizontal rules
+    .replace(/^---$/gm, '<hr class="border-panel-border my-2" />')
+    // List items
+    .replace(/^- (.+)$/gm, '<div class="pl-2">- $1</div>')
+    // Line breaks
+    .replace(/\n/g, '<br />');
+
+  return <div className="text-[11px] text-text-primary leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+// ─── Rephrase Button ────────────────────────────────────
+
+function RephraseButton({ prompt, category, onRephrase }: { prompt: string; category: string; onRephrase: (text: string) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [rephrased, setRephrased] = useState<string | null>(null);
+
+  async function handleRephrase() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/rephrase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, category }),
+      });
+      const data = await res.json();
+      if (data.rephrased && data.rephrased !== prompt) {
+        setRephrased(data.rephrased);
+      }
+    } catch { /* ignore */ }
+    setLoading(false);
+  }
+
+  if (rephrased) {
+    return (
+      <div className="mt-2 pt-2 border-t border-panel-border/30">
+        <div className="text-[8px] text-safe uppercase tracking-wider mb-1">Suggested safe version</div>
+        <div className="text-[10px] text-text-primary bg-safe/5 rounded-sm px-2 py-1.5 border border-safe/20">
+          {rephrased}
+        </div>
+        <button
+          onClick={() => onRephrase(rephrased)}
+          className="mt-1 text-[9px] text-safe hover:text-text-primary transition-colors"
+        >
+          Use this prompt &rarr;
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 pt-2 border-t border-panel-border/30">
+      <button
+        onClick={handleRephrase}
+        disabled={loading}
+        className="text-[9px] text-text-dim hover:text-text-primary transition-colors disabled:opacity-40"
+      >
+        {loading ? "Generating safe version..." : "Try a safer version \u2192"}
+      </button>
+    </div>
+  );
+}
+
 // ─── Page ───────────────────────────────────────────────
 
 export default function Home() {
@@ -375,18 +451,26 @@ export default function Home() {
 
               if (msg.role === "shield" && msg.event) {
                 const evt = msg.event;
-                const isSafe = evt.threatLevel === "safe";
                 const passed = evt.threatLevel === "safe" || evt.threatLevel === "suspicious";
+                const blocked = !passed;
+
+                // Validia category scores for visualization
+                const catScoreEntries = evt.categoryScores
+                  ? Object.entries(evt.categoryScores)
+                      .filter(([, v]) => v > 0.01)
+                      .sort(([, a], [, b]) => b - a)
+                  : [];
+
                 return (
                   <div
                     key={msg.id}
-                    className="py-1.5 px-3 rounded-sm text-[11px]"
+                    className="py-2 px-3 rounded-sm text-[11px]"
                     style={{
                       borderLeft: `3px solid ${LEVEL_HEX[evt.threatLevel]}`,
                       background: (LEVEL_HEX[evt.threatLevel]) + "08",
                     }}
                   >
-                    {/* Main line */}
+                    {/* Main status line */}
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className={`font-bold badge-pulse ${LEVEL_TEXT_CLASS[evt.threatLevel]}`}>
                         {THREAT_LABELS[evt.threatLevel]}
@@ -403,22 +487,51 @@ export default function Home() {
                       <span className="text-text-dim">{evt.latencyMs ?? 0}ms</span>
                       <span className="text-text-sub">&middot;</span>
                       <span className={passed ? "text-safe" : "text-attack"} style={{ fontSize: 9 }}>
-                        {passed ? "PASSED \u2192 forwarding to agent" : "BLOCKED"}
+                        {passed ? "PASSED \u2192 agent" : "BLOCKED"}
                       </span>
                     </div>
-                    {/* Details for non-safe */}
-                    {!isSafe && evt.topMatches?.[0] && (
-                      <div className="text-[10px] text-text-dim mt-0.5">
-                        Top match: {evt.topMatches[0].category} ({Math.round(evt.topMatches[0].similarity * 100)}%)
-                      </div>
-                    )}
-                    {!isSafe && evt.categoryDescription && (
-                      <div className="text-[9px] text-text-sub mt-0.5 italic">{evt.categoryDescription}</div>
-                    )}
-                    {evt.twoStage && (
-                      <div className={`text-[9px] mt-0.5 font-bold ${evt.stage2Verdict === "BENIGN" ? "text-safe" : "text-attack"}`}>
+
+                    {/* Stage 2 verdict (only when we actually have a verdict) */}
+                    {evt.twoStage && evt.stage2Verdict && (
+                      <div className={`text-[9px] mt-1 font-bold ${evt.stage2Verdict === "BENIGN" ? "text-safe" : "text-attack"}`}>
                         Stage 2: {evt.stage2Verdict} ({evt.stage2Model})
                       </div>
+                    )}
+
+                    {/* Category description */}
+                    {evt.categoryDescription && (
+                      <div className="text-[9px] text-text-sub mt-1 italic">{evt.categoryDescription}</div>
+                    )}
+
+                    {/* Validia check breakdown — show for non-safe with scores */}
+                    {catScoreEntries.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-panel-border/30">
+                        <div className="text-[8px] text-text-label uppercase tracking-wider mb-1">Validia Checks</div>
+                        <div className="space-y-0.5">
+                          {catScoreEntries.slice(0, 6).map(([cat, score]) => (
+                            <div key={cat} className="flex items-center gap-2">
+                              <span className="text-[8px] text-text-dim w-28 truncate text-right">
+                                {cat.replace(/_/g, " ").replace(/\bcot\b/gi, "CoT")}
+                              </span>
+                              <div className="flex-1 h-1 bg-[#1a1916] rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full score-bar-fill"
+                                  style={{
+                                    width: `${Math.min(score * 100, 100)}%`,
+                                    background: score > 0.6 ? "#b85c4a" : score > 0.3 ? "#c9a96e" : "#6b6560",
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[8px] text-text-dim w-8 text-right">{score.toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rephrase suggestion for blocked prompts */}
+                    {blocked && (
+                      <RephraseButton prompt={evt.input} category={evt.category ?? "unknown"} onRephrase={(text) => setInput(text)} />
                     )}
                   </div>
                 );
@@ -429,12 +542,14 @@ export default function Home() {
                   <div key={msg.id} className="max-w-[85%]">
                     <div className="bg-panel border border-panel-border rounded-sm px-3 py-2">
                       <div className="text-[9px] text-text-dim mb-1 uppercase tracking-wider">Agent Response</div>
-                      <div className="text-[11px] text-text-primary whitespace-pre-wrap leading-relaxed">
-                        {msg.text || (
-                          <span className="text-text-dim animate-pulse">Generating...</span>
-                        )}
-                        {msg.streaming && <span className="inline-block w-1.5 h-3 bg-text-primary ml-0.5 animate-pulse" />}
-                      </div>
+                      {msg.text ? (
+                        <>
+                          <SimpleMarkdown text={msg.text} />
+                          {msg.streaming && <span className="inline-block w-1.5 h-3 bg-text-primary ml-0.5 animate-pulse" />}
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-text-dim animate-pulse">Generating...</span>
+                      )}
                     </div>
                   </div>
                 );

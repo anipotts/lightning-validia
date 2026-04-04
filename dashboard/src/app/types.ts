@@ -30,6 +30,7 @@ export interface ThreatEvent {
   stage2Model?: string;
   twoStage?: boolean;
   topMatches?: { category: string; similarity: number }[];
+  categoryScores?: Record<string, number>;
   latencyMs?: number;
 }
 
@@ -56,7 +57,7 @@ export const CATEGORY_LABELS: Record<AttackCategory, string> = {
   safety_boundary: "Safety Boundary Probing",
   tool_use_extraction: "Tool Use Extraction",
   reward_model_grading: "Reward Model Grading",
-  censorship_rewrite: "censorship_rewrite",
+  censorship_rewrite: "Censorship Rewrite",
 };
 
 export const THREAT_COLORS: Record<ThreatLevel, string> = {

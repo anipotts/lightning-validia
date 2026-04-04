@@ -99,6 +99,7 @@ export async function analyzePromptAPI(text: string): Promise<ThreatEvent> {
       similarity: m.similarity,
     }));
 
+  const categoryScores = (data.category_scores || {}) as Record<string, number>;
   const categoryDescription = data.category_description as string | undefined;
   const stage2Verdict = data.stage2_verdict as "ATTACK" | "BENIGN" | undefined;
   const stage2Model = data.stage2_model as string | undefined;
@@ -130,6 +131,7 @@ export async function analyzePromptAPI(text: string): Promise<ThreatEvent> {
     stage2Model,
     twoStage,
     topMatches,
+    categoryScores,
     latencyMs,
   };
 }
