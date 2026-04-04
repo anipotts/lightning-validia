@@ -1,0 +1,59 @@
+diff --git a/backend/app/services/analysis/agent.py b/backend/app/services/analysis/agent.py
+index 8f99fc2..3091f18 100644
+--- a/backend/app/services/analysis/agent.py
++++ b/backend/app/services/analysis/agent.py
+@@ -422,7 +422,7 @@ security_agent = Agent(
+         scan_for_suspicious_patterns,
+     ],
+     output_type=AnalysisResult,
+-    model="gpt-4o",
++    model=os.getenv("DEEP_ANALYSIS_MODEL", "gpt-4o"),
+ )
+ 
+ 
+@@ -454,7 +454,7 @@ Investigate this update. If there are ANY dependency additions or version change
+ 
+     try:
+         result = await Runner.run(security_agent, prompt)
+-        metadata = {"model": "gpt-4o"}
++        metadata = {"model": os.getenv("DEEP_ANALYSIS_MODEL", "gpt-4o")}
+         return result.final_output, metadata
+     finally:
+         _cleanup_all_temps()
+diff --git a/backend/app/utils/llm.py b/backend/app/utils/llm.py
+index 5bdb63a..dfe68dc 100644
+--- a/backend/app/utils/llm.py
++++ b/backend/app/utils/llm.py
+@@ -1,4 +1,5 @@
+ import logging
++import os
+ from typing import TypeVar
+ 
+ from openai import AsyncOpenAI
+@@ -17,7 +18,10 @@ _client: AsyncOpenAI | None = None
+ def get_openai_client() -> AsyncOpenAI:
+     global _client
+     if _client is None:
+-        _client = AsyncOpenAI(api_key=settings.openai_api_key)
++        _client = AsyncOpenAI(
++            api_key=settings.openai_api_key,
++            base_url=os.getenv("OPENAI_BASE_URL", None),
++        )
+     return _client
+ 
+ 
+diff --git a/docker-compose.yml b/docker-compose.yml
+index de2884f..9d17ff4 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -25,6 +25,10 @@ services:
+     environment:
+       DATABASE_URL: postgresql+asyncpg://ghost:ghost@postgres:5432/ghost
+       OPENAI_API_KEY: ${OPENAI_API_KEY}
++      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
++      TRIAGE_MODEL: ${TRIAGE_MODEL:-openai/gpt-5-nano}
++      DEEP_ANALYSIS_MODEL: ${DEEP_ANALYSIS_MODEL:-openai/gpt-4o}
++      SYNTHESIS_MODEL: ${SYNTHESIS_MODEL:-openai/gpt-4o}
+       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+       FRONTEND_URL: http://localhost:3000
