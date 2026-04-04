@@ -246,52 +246,85 @@ function ValidiaChecks({ scores, topMatches }: {
 // ─── Rephrase Button ────────────────────────────────────
 
 function RephraseButton({ prompt, category, onRephrase }: { prompt: string; category: string; onRephrase: (text: string) => void }) {
-  const [loading, setLoading] = useState(false);
   const [rephrased, setRephrased] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  async function handleRephrase() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/rephrase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, category }),
-      });
-      const data = await res.json();
-      if (data.rephrased && data.rephrased !== prompt) {
-        setRephrased(data.rephrased);
-      }
-    } catch { /* ignore */ }
-    setLoading(false);
-  }
+  // Auto-fetch on mount — no click needed
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/rephrase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, category }),
+        });
+        const data = await res.json();
+        if (!cancelled && data.rephrased && data.rephrased !== prompt) {
+          setRephrased(data.rephrased);
+        }
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [prompt, category]);
 
-  if (rephrased) {
+  if (loading) {
     return (
-      <div className="mt-2 pt-2 border-t border-panel-border/30">
-        <div className="text-[10px] text-safe uppercase tracking-wider mb-1">Suggested safe version</div>
-        <div className="text-[13px] text-text-primary bg-safe/5 rounded-sm px-3 py-2 border border-safe/20 leading-5">
-          {rephrased}
-        </div>
-        <button
-          onClick={() => onRephrase(rephrased)}
-          className="mt-1.5 text-[11px] text-safe hover:text-text-primary transition-colors"
-        >
-          Use this prompt &rarr;
-        </button>
+      <div className="mt-3 pt-3 border-t border-panel-border/30">
+        <div className="text-[10px] text-text-dim animate-pulse">Generating safe alternative...</div>
       </div>
     );
   }
 
+  if (!rephrased) return null;
+
   return (
-    <div className="mt-2 pt-2 border-t border-panel-border/30">
+    <div className="mt-3 pt-3 border-t border-panel-border/30">
+      <div className="text-[10px] text-safe uppercase tracking-wider mb-1.5">Suggested safe version</div>
+      <div className="text-[14px] text-text-primary bg-safe/5 rounded-sm px-3 py-2.5 border border-safe/20 leading-5">
+        {rephrased}
+      </div>
       <button
-        onClick={handleRephrase}
-        disabled={loading}
-        className="text-[9px] text-text-dim hover:text-text-primary transition-colors disabled:opacity-40"
+        onClick={() => onRephrase(rephrased)}
+        className="mt-2 text-[12px] text-safe hover:text-text-primary transition-colors font-medium"
       >
-        {loading ? "Generating safe version..." : "Try a safer version \u2192"}
+        Use this prompt &rarr;
       </button>
     </div>
+  );
+}
+
+// ─── Feedback Buttons ───────────────────────────────────
+
+function ShieldFeedback({ eventId }: { eventId: string }) {
+  const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
+
+  if (feedback) {
+    return (
+      <span className="text-[10px] text-text-sub ml-2">
+        {feedback === "correct" ? "Confirmed" : "Reported"}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 ml-2" data-event={eventId}>
+      <button
+        onClick={() => setFeedback("correct")}
+        className="text-[10px] text-text-sub hover:text-safe transition-colors px-1"
+        title="Correct classification"
+      >
+        &#x2713;
+      </button>
+      <button
+        onClick={() => setFeedback("incorrect")}
+        className="text-[10px] text-text-sub hover:text-attack transition-colors px-1"
+        title="Incorrect classification"
+      >
+        &#x2717;
+      </button>
+    </span>
   );
 }
 
@@ -578,9 +611,10 @@ export default function Home() {
                       <span className="text-text-sub">&middot;</span>
                       <span className="text-text-dim">{evt.latencyMs ?? 0}ms</span>
                       <span className="text-text-sub">&middot;</span>
-                      <span className={passed ? "text-safe" : "text-attack"} style={{ fontSize: 9 }}>
+                      <span className={passed ? "text-safe" : "text-attack"} style={{ fontSize: 10 }}>
                         {passed ? "PASSED \u2192 agent" : "BLOCKED"}
                       </span>
+                      <ShieldFeedback eventId={evt.id ?? msg.id} />
                     </div>
 
                     {/* Stage 2 verdict (only when we actually have a verdict) */}
