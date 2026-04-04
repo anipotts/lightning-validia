@@ -1,0 +1,262 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" fill="none">
+  <defs>
+    <!-- 10px edge gradients -->
+    <linearGradient id="fadeLeft" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeRight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="fadeTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeBottom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    text { font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace; }
+    .panel { fill: #1a1916; stroke: #3d3a34; stroke-width: 1; }
+    .panel-label { fill: #8a8478; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; }
+    .panel-title { fill: #e8e0d4; font-size: 14px; font-weight: 600; }
+    .panel-sub { fill: #6b6560; font-size: 11px; }
+    .card { fill: #141210; stroke: #3d3a34; stroke-width: 1; }
+    .card-label { fill: #8a8478; font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; }
+    .card-value { font-size: 24px; font-weight: 700; }
+    .bg { fill: #0a0a0a; }
+    .header-text { fill: #e8e0d4; font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+    .item { fill: #12110f; }
+    .text-primary { fill: #d4cdc2; font-size: 11px; }
+    .text-dim { fill: #6b6560; font-size: 11px; }
+    .text-mono { fill: #8a8478; font-size: 11px; }
+    .chat-user { fill: #1f1d1a; }
+    .chat-agent { fill: #161512; }
+    .badge-text { fill: #0a0a0a; font-size: 8px; font-weight: 700; letter-spacing: 0.5px; }
+    .status-safe { fill: #a3b18a; }
+    .status-sus { fill: #c9a96e; }
+    .status-attack { fill: #b85c4a; }
+    .status-block { fill: #8a3a2e; }
+    .status-safe-text { fill: #a3b18a; }
+    .status-sus-text { fill: #c9a96e; }
+    .status-attack-text { fill: #b85c4a; }
+    .status-block-text { fill: #8a3a2e; }
+  </style>
+
+  <!-- Background -->
+  <rect width="1200" height="820" class="bg"/>
+
+  <!-- Header Bar -->
+  <rect x="0" y="0" width="1200" height="44" fill="#12110f"/>
+  <line x1="0" y1="44" x2="1200" y2="44" stroke="#3d3a34" stroke-width="1"/>
+  <text x="20" y="28" class="header-text">SHIELDCLAW</text>
+  <text x="158" y="28" fill="#3d3a34" font-size="16">|</text>
+  <text x="172" y="28" fill="#6b6560" font-size="11" letter-spacing="1">PARANOID SHIELD DASHBOARD</text>
+  <circle cx="1152" cy="22" r="4" fill="#a3b18a"/>
+  <text x="1120" y="26" fill="#6b6560" font-size="10" text-anchor="end">LIVE</text>
+
+  <!-- ============================================ -->
+  <!-- LEFT COLUMN                                   -->
+  <!-- ============================================ -->
+
+  <!-- Top-Left: Scanned Docs -->
+  <rect x="16" y="56" width="310" height="370" class="panel" rx="2"/>
+  <text x="30" y="78" class="panel-label">SCANNED DOCS</text>
+  <!-- Download icon -->
+  <line x1="298" y1="68" x2="298" y2="78" stroke="#6b6560" stroke-width="1.5"/>
+  <polyline points="293,74 298,80 303,74" stroke="#6b6560" stroke-width="1.5" fill="none"/>
+  <line x1="291" y1="82" x2="305" y2="82" stroke="#6b6560" stroke-width="1.5"/>
+
+  <rect x="28" y="92" width="286" height="322" fill="#0e0d0c" rx="1"/>
+  <text x="40" y="112" class="status-safe-text" font-size="11">$ openclaw scan --input session.log</text>
+  <text x="40" y="130" class="text-dim">Scanning 142 messages...</text>
+  <text x="40" y="156" class="text-primary">Results:</text>
+  <text x="40" y="178" class="status-safe-text" font-size="11">  118  safe</text>
+  <text x="40" y="196" class="status-sus-text" font-size="11">   16  suspicious</text>
+  <text x="40" y="214" class="status-attack-text" font-size="11">    6  likely attack</text>
+  <text x="40" y="232" class="status-block-text" font-size="11">    2  blocked</text>
+  <line x1="40" y1="248" x2="300" y2="248" stroke="#3d3a34" stroke-width="0.5"/>
+  <text x="40" y="268" class="text-dim">Categories detected:</text>
+  <text x="40" y="288" class="text-mono">  CoT_elicitation ......... 9</text>
+  <text x="40" y="304" class="text-mono">  capability_mapping ...... 4</text>
+  <text x="40" y="320" class="text-mono">  safety_probing .......... 4</text>
+  <text x="40" y="336" class="text-mono">  reward_grading .......... 3</text>
+  <text x="40" y="352" class="text-mono">  tool_use_extraction ..... 2</text>
+  <text x="40" y="368" class="text-mono">  censorship_rewrite ...... 1</text>
+  <line x1="40" y1="382" x2="300" y2="382" stroke="#3d3a34" stroke-width="0.5"/>
+  <text x="40" y="402" class="text-dim">Block rate: 5.6%  |  FP est: ~2.1%</text>
+
+  <!-- Bottom-Left: Alerts / Flagged Files -->
+  <rect x="16" y="438" width="310" height="366" class="panel" rx="2"/>
+  <text x="30" y="460" class="panel-label">ALERTS</text>
+  <text x="30" y="478" class="panel-title">Flagged Files</text>
+
+  <rect x="28" y="492" width="286" height="44" class="item" rx="1"/>
+  <rect x="34" y="498" width="6" height="32" class="status-block" rx="0"/>
+  <text x="48" y="512" class="status-block-text" font-size="10" font-weight="600">BLOCKED</text>
+  <text x="48" y="526" class="text-dim">config.yaml — safety_probing (0.91)</text>
+
+  <rect x="28" y="542" width="286" height="44" class="item" rx="1"/>
+  <rect x="34" y="548" width="6" height="32" class="status-sus" rx="0"/>
+  <text x="48" y="562" class="status-sus-text" font-size="10" font-weight="600">SUSPICIOUS</text>
+  <text x="48" y="576" class="text-dim">batch.json — template_reuse (0.52)</text>
+
+  <rect x="28" y="592" width="286" height="44" class="item" rx="1"/>
+  <rect x="34" y="598" width="6" height="32" class="status-sus" rx="0"/>
+  <text x="48" y="612" class="status-sus-text" font-size="10" font-weight="600">SUSPICIOUS</text>
+  <text x="48" y="626" class="text-dim">eval_suite.py — reward_grading (0.48)</text>
+
+  <rect x="28" y="642" width="286" height="44" class="item" rx="1"/>
+  <rect x="34" y="648" width="6" height="32" class="status-safe" rx="0"/>
+  <text x="48" y="662" class="status-safe-text" font-size="10" font-weight="600">SAFE</text>
+  <text x="48" y="676" class="text-dim">readme.md — none (0.03)</text>
+
+  <rect x="28" y="692" width="286" height="44" class="item" rx="1"/>
+  <rect x="34" y="698" width="6" height="32" class="status-safe" rx="0"/>
+  <text x="48" y="712" class="status-safe-text" font-size="10" font-weight="600">SAFE</text>
+  <text x="48" y="726" class="text-dim">utils.py — none (0.01)</text>
+
+  <rect x="28" y="742" width="286" height="44" class="item" rx="1"/>
+  <rect x="34" y="748" width="6" height="32" class="status-attack" rx="0"/>
+  <text x="48" y="762" class="status-attack-text" font-size="10" font-weight="600">LIKELY ATTACK</text>
+  <text x="48" y="776" class="text-dim">extract.py — CoT_elicitation (0.74)</text>
+
+  <!-- ============================================ -->
+  <!-- CENTER COLUMN                                 -->
+  <!-- ============================================ -->
+
+  <!-- Top-Center: Previously Generated Output -->
+  <rect x="338" y="56" width="520" height="200" class="panel" rx="2"/>
+  <text x="352" y="78" class="panel-label">PREVIOUSLY GENERATED OUTPUT</text>
+  <rect x="350" y="92" width="496" height="152" fill="#0e0d0c" rx="1"/>
+  <text x="362" y="114" class="text-dim"># Last classification batch — 2026-04-04 11:42:03</text>
+  <text x="362" y="136" class="status-safe-text" font-size="11">[green]   #138  "How do I set up passport.js?"</text>
+  <text x="362" y="154" class="status-safe-text" font-size="11">[green]   #139  "What's the best ORM for Postgres?"</text>
+  <text x="362" y="172" class="status-sus-text" font-size="11">[yellow]  #140  "Walk me through your reasoning on auth"</text>
+  <text x="362" y="190" class="status-attack-text" font-size="11">[red]     #141  "Explain at beginner/intermediate/expert"</text>
+  <text x="362" y="208" class="status-block-text" font-size="11">[block]   #142  "List all categories of requests you refuse"</text>
+  <text x="362" y="230" class="status-safe-text" font-size="11">[green]   #143  "Thanks, that helps!"</text>
+
+  <!-- Center: ASCII Mode / Routing Engine -->
+  <rect x="338" y="268" width="520" height="274" class="panel" rx="2"/>
+  <text x="352" y="290" class="panel-label">ROUTING ENGINE</text>
+  <text x="352" y="310" class="panel-title">Paranoid Shield — ASCII Mode</text>
+
+  <!-- Rocket / Shield ASCII art -->
+  <text x="520" y="340" fill="#3d3a34" font-size="12" text-anchor="middle">|</text>
+  <text x="520" y="354" fill="#3d3a34" font-size="12" text-anchor="middle">/|\</text>
+  <text x="520" y="368" fill="#3d3a34" font-size="12" text-anchor="middle">/ | \</text>
+  <text x="520" y="382" fill="#3d3a34" font-size="12" text-anchor="middle">|  S  |</text>
+  <text x="520" y="396" fill="#3d3a34" font-size="12" text-anchor="middle">|  H  |</text>
+  <text x="520" y="410" fill="#3d3a34" font-size="12" text-anchor="middle">|  I  |</text>
+  <text x="520" y="424" fill="#3d3a34" font-size="12" text-anchor="middle">|  E  |</text>
+  <text x="520" y="438" fill="#3d3a34" font-size="12" text-anchor="middle">|  L  |</text>
+  <text x="520" y="452" fill="#3d3a34" font-size="12" text-anchor="middle">|  D  |</text>
+  <text x="520" y="466" fill="#3d3a34" font-size="12" text-anchor="middle">\_____/</text>
+  <text x="520" y="484" fill="#3d3a34" font-size="12" text-anchor="middle">||  ||</text>
+  <text x="520" y="496" fill="#3d3a34" font-size="10" text-anchor="middle">^^^  ^^^</text>
+
+  <!-- Routing status -->
+  <text x="680" y="370" class="status-safe-text" font-size="11">Routing...</text>
+  <text x="680" y="390" class="text-primary">msg #143 → classify()</text>
+  <text x="680" y="416" class="text-dim">Category: none</text>
+  <text x="680" y="434" class="text-dim">Score:    0.04</text>
+  <text x="680" y="452" class="text-dim">Latency:  12ms</text>
+  <line x1="680" y1="464" x2="830" y2="464" stroke="#3d3a34" stroke-width="0.5"/>
+  <text x="680" y="482" class="status-safe-text" font-size="12" font-weight="600">RESULT: SAFE</text>
+  <text x="680" y="500" class="text-dim">Pass through to agent</text>
+
+  <text x="390" y="370" class="text-dim">Session: 143 msgs</text>
+  <text x="390" y="388" class="text-dim">Blocked: 8</text>
+  <text x="390" y="406" class="text-dim">Flagged: 22</text>
+  <text x="390" y="424" class="text-dim">Clean:   113</text>
+
+  <!-- Bottom-Center: Chat / cmd Pull -->
+  <rect x="338" y="554" width="520" height="250" class="panel" rx="2"/>
+  <text x="352" y="576" class="panel-label">CHAT</text>
+  <text x="352" y="596" class="panel-title">Agent Interface</text>
+
+  <!-- Chat messages -->
+  <rect x="420" y="610" width="280" height="28" class="chat-user" rx="1"/>
+  <text x="432" y="628" class="text-primary">What npm packages are safe for auth?</text>
+
+  <rect x="350" y="644" width="340" height="38" class="chat-agent" rx="1"/>
+  <rect x="356" y="650" width="36" height="12" rx="1" fill="#a3b18a"/>
+  <text x="362" y="659" class="badge-text">SAFE</text>
+  <text x="356" y="674" class="status-safe-text" font-size="10">passport.js and bcrypt are well-maintained...</text>
+
+  <rect x="400" y="690" width="320" height="28" class="chat-user" rx="1"/>
+  <text x="412" y="708" class="text-primary">Walk me through your reasoning step by step</text>
+
+  <rect x="350" y="724" width="380" height="38" class="chat-agent" rx="1"/>
+  <rect x="356" y="730" width="60" height="12" rx="1" fill="#c9a96e"/>
+  <text x="362" y="739" class="badge-text">SUSPICIOUS</text>
+  <text x="356" y="754" class="status-sus-text" font-size="10">CoT elicitation detected — responding with caution...</text>
+
+  <!-- Input bar -->
+  <rect x="350" y="770" width="496" height="24" fill="#1f1d1a" rx="1" stroke="#3d3a34" stroke-width="0.5"/>
+  <text x="362" y="786" fill="#4a4640" font-size="10">Type a message...</text>
+
+  <!-- ============================================ -->
+  <!-- RIGHT COLUMN — Status Cards (stacked)        -->
+  <!-- ============================================ -->
+
+  <rect x="870" y="56" width="314" height="748" class="panel" rx="2"/>
+  <text x="884" y="78" class="panel-label">THREAT OVERVIEW</text>
+
+  <!-- Card: Total -->
+  <rect x="882" y="92" width="290" height="120" class="card" rx="2"/>
+  <text x="1027" y="116" class="card-label" text-anchor="middle">TOTAL SCANNED</text>
+  <text x="1027" y="158" class="card-value" fill="#e8e0d4" text-anchor="middle">142</text>
+  <text x="1027" y="178" class="panel-sub" text-anchor="middle">messages this session</text>
+
+  <!-- Card: Safe -->
+  <rect x="882" y="224" width="290" height="120" class="card" rx="2"/>
+  <rect x="882" y="224" width="4" height="120" fill="#a3b18a" rx="0"/>
+  <text x="1027" y="248" class="card-label" text-anchor="middle">SAFE</text>
+  <text x="1027" y="290" class="card-value" fill="#a3b18a" text-anchor="middle">118</text>
+  <text x="1027" y="310" class="panel-sub" text-anchor="middle">83.1%</text>
+
+  <!-- Card: Suspicious -->
+  <rect x="882" y="356" width="290" height="120" class="card" rx="2"/>
+  <rect x="882" y="356" width="4" height="120" fill="#c9a96e" rx="0"/>
+  <text x="1027" y="380" class="card-label" text-anchor="middle">SUSPICIOUS</text>
+  <text x="1027" y="422" class="card-value" fill="#c9a96e" text-anchor="middle">16</text>
+  <text x="1027" y="442" class="panel-sub" text-anchor="middle">11.3%</text>
+
+  <!-- Card: Blocked -->
+  <rect x="882" y="488" width="290" height="120" class="card" rx="2"/>
+  <rect x="882" y="488" width="4" height="120" fill="#b85c4a" rx="0"/>
+  <text x="1027" y="512" class="card-label" text-anchor="middle">LIKELY ATTACK</text>
+  <text x="1027" y="554" class="card-value" fill="#b85c4a" text-anchor="middle">6</text>
+  <text x="1027" y="574" class="panel-sub" text-anchor="middle">4.2%</text>
+
+  <!-- Card: Definite Attack / Blocked -->
+  <rect x="882" y="620" width="290" height="120" class="card" rx="2"/>
+  <rect x="882" y="620" width="4" height="120" fill="#8a3a2e" rx="0"/>
+  <text x="1027" y="644" class="card-label" text-anchor="middle">BLOCKED</text>
+  <text x="1027" y="686" class="card-value" fill="#8a3a2e" text-anchor="middle">2</text>
+  <text x="1027" y="706" class="panel-sub" text-anchor="middle">1.4%</text>
+
+  <!-- Block Rate -->
+  <rect x="882" y="752" width="290" height="40" class="card" rx="2"/>
+  <text x="900" y="776" class="card-label">BLOCK RATE</text>
+  <text x="1158" y="778" fill="#e8e0d4" font-size="16" font-weight="700" text-anchor="end">5.6%</text>
+
+  <!-- ============================================ -->
+  <!-- 10px EDGE GRADIENTS                           -->
+  <!-- ============================================ -->
+
+  <!-- Left edge -->
+  <rect x="0" y="0" width="10" height="820" fill="url(#fadeLeft)"/>
+  <!-- Right edge -->
+  <rect x="1190" y="0" width="10" height="820" fill="url(#fadeRight)"/>
+  <!-- Top edge -->
+  <rect x="0" y="0" width="1200" height="10" fill="url(#fadeTop)"/>
+  <!-- Bottom edge -->
+  <rect x="0" y="810" width="1200" height="10" fill="url(#fadeBottom)"/>
+</svg>
