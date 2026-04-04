@@ -71,16 +71,29 @@ export async function analyzePromptAPI(text: string): Promise<ThreatEvent> {
     ? category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : null;
 
+  const stage2Verdict = data.stage2_verdict as "ATTACK" | "BENIGN" | undefined;
+  const stage2Model = data.stage2_model as string | undefined;
+  const twoStage = data.two_stage as boolean | undefined;
+
+  let response = SAMPLE_RESPONSES[threatLevel](catLabel);
+  if (stage2Verdict) {
+    const verb = stage2Verdict === "BENIGN" ? "verified" : "confirmed";
+    response += ` [Stage 2 ${verb}: ${stage2Verdict}]`;
+  }
+
   return {
     id: crypto.randomUUID(),
     input: text,
-    response: SAMPLE_RESPONSES[threatLevel](catLabel),
+    response,
     threatLevel,
     threatScore: data.threat_score,
     category,
     signals,
     metaSignals,
     timestamp: new Date(),
+    stage2Verdict,
+    stage2Model,
+    twoStage,
   };
 }
 

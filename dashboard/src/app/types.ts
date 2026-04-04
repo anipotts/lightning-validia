@@ -25,6 +25,9 @@ export interface ThreatEvent {
   signals: string[];
   metaSignals: MetaSignal[];
   timestamp: Date;
+  stage2Verdict?: "ATTACK" | "BENIGN";
+  stage2Model?: string;
+  twoStage?: boolean;
 }
 
 export interface FlaggedFile {
