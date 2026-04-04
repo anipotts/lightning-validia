@@ -184,55 +184,46 @@ const LEVEL_TEXT_CLASS: Record<string, string> = {
   blocked: "text-blocked",
 };
 
-type RocketPhase = "idle" | "launch" | "fly" | "land" | "crash";
+type ShieldPhase = "idle" | "launch" | "fly" | "land" | "crash";
 
-const ROCKET_ART =
-  "    |    \n" +
-  "   /|\\   \n" +
-  "  / | \\  \n" +
-  " |  S  | \n" +
-  " |  H  | \n" +
-  " |  I  | \n" +
-  " |  E  | \n" +
-  " |  L  | \n" +
-  " |  D  | \n" +
-  " \\_____/ \n" +
-  "  || ||  ";
+function ShieldIcon({ phase }: { phase: ShieldPhase }) {
+  const isAnalyzing = phase === "launch" || phase === "fly";
+  const isSafe = phase === "land";
+  const isDanger = phase === "crash";
 
-// Every line is exactly 9 chars, matching ROCKET_ART width
-const EXHAUST = [
-  " )|| ||( \n  \\~~~~/ \n   \\~~/  \n    \\/   ",
-  " (|| ||) \n  (~~~~) \n   (~~)  \n    \\/   ",
-  " )|| ||( \n  )~~~~( \n   )~~(  \n    \\/   ",
-];
+  const color = isDanger
+    ? "var(--attack)"
+    : isSafe
+    ? "var(--safe)"
+    : isAnalyzing
+    ? "var(--suspicious)"
+    : "var(--text-sub)";
 
-const CRASH_ART =
-  "      *      \n" +
-  "   \\  |  /   \n" +
-  "  -- * * --  \n" +
-  "   /  |  \\   \n" +
-  "     / \\     \n" +
-  "   /_ _ _\\   \n" +
-  "  |  S H  |  \n" +
-  "  | I E L |  \n" +
-  "  |__D____|  \n" +
-  "   //  \\\\    \n" +
-  " ~~~~~~~~~~~ ";
-
-const LANDED_ART =
-  "    |    \n" +
-  "   /|\\   \n" +
-  "  / | \\  \n" +
-  " |  S  | \n" +
-  " |  H  | \n" +
-  " |  I  | \n" +
-  " |  E  | \n" +
-  " |  L  | \n" +
-  " |  D  | \n" +
-  " \\_____/ \n" +
-  "  || ||  \n" +
-  " ======= \n" +
-  "    OK   ";
+  return (
+    <svg width="64" height="72" viewBox="0 0 64 72" fill="none"
+      className={isAnalyzing ? "animate-pulse" : ""}>
+      <path
+        d="M32 2L4 16v20c0 17.6 11.9 34.1 28 38 16.1-3.9 28-20.4 28-38V16L32 2z"
+        fill={color}
+        fillOpacity="0.12"
+        stroke={color}
+        strokeWidth="2.5"
+      />
+      {isSafe && (
+        <path d="M20 36l8 8 16-16" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      )}
+      {isDanger && (
+        <>
+          <line x1="24" y1="28" x2="40" y2="44" stroke={color} strokeWidth="3" strokeLinecap="round" />
+          <line x1="40" y1="28" x2="24" y2="44" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        </>
+      )}
+      {isAnalyzing && (
+        <circle cx="32" cy="36" r="4" fill={color} />
+      )}
+    </svg>
+  );
+}
 
 const LEVEL_BG_CLASS: Record<string, string> = {
   safe: "bg-safe",
@@ -317,8 +308,8 @@ export default function Home() {
   const [useWs, setUseWs] = useState(false);
   const [flaggedFiles, setFlaggedFiles] = useState<FlaggedFile[]>(INITIAL_FLAGGED_FILES);
   const [routingEvent, setRoutingEvent] = useState<ThreatEvent | null>(null);
-  const [rocketPhase, setRocketPhase] = useState<RocketPhase>("idle");
-  const [exhaustFrame, setExhaustFrame] = useState(0);
+  const [shieldPhase, setShieldPhase] = useState<ShieldPhase>("idle");
+
   const [pendingEvent, setPendingEvent] = useState<ThreatEvent | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -338,14 +329,6 @@ export default function Home() {
     }
   }, [gateway.events, events]);
 
-  // Exhaust animation loop during launch/fly
-  useEffect(() => {
-    if (rocketPhase !== "launch" && rocketPhase !== "fly") return;
-    const interval = setInterval(() => {
-      setExhaustFrame((f) => (f + 1) % EXHAUST.length);
-    }, 100);
-    return () => clearInterval(interval);
-  }, [rocketPhase]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -362,8 +345,8 @@ export default function Home() {
     }
 
     setInput("");
-    setRocketPhase("launch");
-    setTimeout(() => setRocketPhase("fly"), 400);
+    setShieldPhase("launch");
+    setTimeout(() => setShieldPhase("fly"), 400);
 
     // Try real API first, fall back to local
     let event;
@@ -378,7 +361,7 @@ export default function Home() {
     // land/crash after fly
     setTimeout(() => {
       const isSafe = event.threatLevel === "safe";
-      setRocketPhase(isSafe ? "land" : "crash");
+      setShieldPhase(isSafe ? "land" : "crash");
       setEvents((prev) => [...prev, event]);
       setStats((prev) => updateStats(prev, event));
       setRoutingEvent(event);
@@ -390,7 +373,7 @@ export default function Home() {
       }
     }, 800);
     setTimeout(() => {
-      setRocketPhase("idle");
+      setShieldPhase("idle");
       setPendingEvent(null);
     }, 2600);
     setInput("");
@@ -506,11 +489,10 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Routing Engine */}
+          {/* Security Check */}
           <div className="bg-panel border border-panel-border rounded-sm">
             <div className="px-3 py-2">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Routing Engine</span>
-              <div className="text-sm font-semibold text-text-primary mt-0.5">Paranoid Shield — ASCII Mode</div>
+              <div className="text-xs text-text-label">Security Check</div>
             </div>
             <div className="px-3 pb-3 flex">
               {/* Left stats */}
@@ -521,44 +503,26 @@ export default function Home() {
                 <div>Clean: {stats.safe}</div>
               </div>
 
-              {/* ASCII Shield */}
-              <div className="flex-1 flex items-center justify-center pt-8">
-                <div className="inline-block">
-                  {rocketPhase === "crash" ? (
-                    <pre className="text-[10px] leading-[1.2] select-none text-attack whitespace-pre" style={{ fontFamily: "'Courier New', Courier, monospace" }}>{CRASH_ART}</pre>
-                  ) : rocketPhase === "land" ? (
-                    <pre className="text-[10px] leading-[1.2] select-none text-safe whitespace-pre" style={{ fontFamily: "'Courier New', Courier, monospace" }}>{LANDED_ART}</pre>
-                  ) : (
-                    <pre
-                      className={`text-[10px] leading-[1.2] select-none whitespace-pre transition-transform duration-500 ease-in-out ${
-                        rocketPhase === "fly" ? "-translate-y-6" : rocketPhase === "launch" ? "-translate-y-2" : "translate-y-0"
-                      } ${rocketPhase === "launch" || rocketPhase === "fly" ? "text-suspicious" : "text-text-sub"}`}
-                      style={{ fontFamily: "'Courier New', Courier, monospace" }}
-                    >{ROCKET_ART}{"\n"}<span className={rocketPhase === "launch" || rocketPhase === "fly" ? "text-attack" : ""}>{
-                      (rocketPhase === "launch" || rocketPhase === "fly")
-                        ? EXHAUST[exhaustFrame]
-                        : "  ^^  ^^ "
-                    }</span></pre>
-                  )}
-                </div>
+              {/* Shield Icon */}
+              <div className="flex-1 flex items-center justify-center">
+                <ShieldIcon phase={shieldPhase} />
               </div>
 
               {/* Routing status */}
               <div className="text-[11px] w-44 shrink-0">
                 {routingEvent ? (
                   <>
-                    <div className={LEVEL_TEXT_CLASS[routingEvent.threatLevel]}>Routing...</div>
-                    <div className="text-text-primary mt-1">msg #{msgNumber} → classify()</div>
-                    <div className="text-text-dim mt-2">Category: {routingEvent.category ?? "none"}</div>
-                    <div className="text-text-dim">Score: {pad("", 3)}{routingEvent.threatScore.toFixed(2)}</div>
-                    <div className="text-text-dim">Latency: {pad("", 1)}{Math.floor(Math.random() * 20 + 5)}ms</div>
+                    <div className={`text-[10px] ${LEVEL_TEXT_CLASS[routingEvent.threatLevel]}`}>Checking...</div>
+                    <div className="text-text-dim mt-1 text-[10px]">Message #{msgNumber}</div>
+                    <div className="text-text-dim mt-2 text-[10px]">Category: {routingEvent.category ?? "none"}</div>
+                    <div className="text-text-dim text-[10px]">Score: {pad("", 3)}{routingEvent.threatScore.toFixed(2)}</div>
+                    <div className="text-text-dim text-[10px]">Latency: {pad("", 1)}{Math.floor(Math.random() * 20 + 5)}ms</div>
                     <div className="border-t border-panel-border my-2" />
-                    <div className={`text-xs font-bold ${LEVEL_TEXT_CLASS[routingEvent.threatLevel]}`}>
-                      RESULT: {THREAT_LABELS[routingEvent.threatLevel]}
-                    </div>
-                    <div className="text-text-dim">
-                      {routingEvent.threatLevel === "safe" ? "Pass through to agent" : "Flagged by shield"}
-                    </div>
+                    {routingEvent.threatLevel === "safe" ? (
+                      <div className="text-[10px] text-text-dim mt-1">&#10003; Message verified</div>
+                    ) : (
+                      <div className={`text-[10px] font-medium mt-1 ${LEVEL_TEXT_CLASS[routingEvent.threatLevel]}`}>&#10005; Message flagged</div>
+                    )}
                     {routingEvent.twoStage && (
                       <div className={`text-[10px] mt-1 ${routingEvent.stage2Verdict === "BENIGN" ? "text-safe" : "text-attack"}`}>
                         Stage 2: {routingEvent.stage2Verdict} ({routingEvent.stage2Model})
@@ -575,13 +539,12 @@ export default function Home() {
           {/* Chat */}
           <div className="bg-panel border border-panel-border rounded-sm flex-1 flex flex-col min-h-[180px]">
             <div className="px-3 py-2">
-              <span className="text-[10px] text-text-label uppercase tracking-[2px]">Chat</span>
-              <div className="text-sm font-semibold text-text-primary mt-0.5">Agent Interface</div>
+              <div className="text-xs text-text-label">Chat</div>
             </div>
             <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-2">
               {events.length === 0 && (
                 <div className="flex items-center justify-center h-full text-text-sub text-[11px]">
-                  Type a message to test the Paranoid Agent...
+                  Type a message...
                 </div>
               )}
               {events.map((evt) => (
