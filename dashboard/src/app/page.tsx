@@ -553,6 +553,11 @@ export default function Home() {
                     <div className="text-text-dim">
                       {routingEvent.threatLevel === "safe" ? "Pass through to agent" : "Flagged by shield"}
                     </div>
+                    {routingEvent.twoStage && (
+                      <div className={`text-[10px] mt-1 ${routingEvent.stage2Verdict === "BENIGN" ? "text-safe" : "text-attack"}`}>
+                        Stage 2: {routingEvent.stage2Verdict} ({routingEvent.stage2Model})
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="text-text-dim">Awaiting input...</div>
@@ -587,6 +592,19 @@ export default function Home() {
                       <span className={`inline-block text-[8px] font-bold tracking-[0.5px] px-1.5 py-0.5 rounded-sm text-bg ${LEVEL_BG_CLASS[evt.threatLevel]}`}>
                         {THREAT_LABELS[evt.threatLevel]}
                       </span>
+                      {evt.twoStage ? (
+                        <span className={`inline-block text-[8px] font-bold tracking-[0.5px] px-1.5 py-0.5 rounded-sm ml-1 ${
+                          evt.stage2Verdict === "BENIGN"
+                            ? "bg-safe/20 text-safe border border-safe/30"
+                            : "bg-attack/20 text-attack border border-attack/30"
+                        }`}>
+                          {evt.stage2Verdict === "BENIGN" ? "\u2713 Stage 2: Benign" : "\u26A0 Stage 2: Attack"}
+                        </span>
+                      ) : evt.threatLevel !== "safe" ? (
+                        <span className="inline-block text-[8px] tracking-[0.5px] px-1.5 py-0.5 rounded-sm ml-1 bg-[#222] text-text-dim border border-panel-border">
+                          Stage 1 only
+                        </span>
+                      ) : null}
                       <div className={`text-[10px] mt-1 ${LEVEL_TEXT_CLASS[evt.threatLevel]}`}>
                         {evt.response}
                       </div>

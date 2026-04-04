@@ -39,6 +39,9 @@ CATEGORIES = {
             r"walk\s+me\s+through", r"reasoning\s+process", r"explain\s+your\s+approach",
             r"<thinking>", r"internal\s+(thought|monologue)", r"think\s+out\s+loud",
             r"trace\s+(your\s+)?logic", r"intermediate\s+thoughts",
+            r"narrate.*cognitive", r"dead\s+end.*correct", r"hypothes.*prior.*update",
+            r"stream\s+of\s+consciousness", r"think.?aloud\s+protocol",
+            r"pair.?programming.*narrat", r"metacogniti", r"screencast.*walkthrough",
         ],
     },
     "capability_mapping": {
@@ -48,6 +51,9 @@ CATEGORIES = {
             r"what\s+can\s+you\s+do\s+with", r"list\s+every\s+type\s+of\s+task",
             r"organized\s+by\s+domain", r"difficulty\s+ladder",
             r"from\s+1.?10\s+in", r"full\s+range\s+of\s+tasks",
+            r"clinical\s+vignette", r"board.certified", r"benchmark.*translation",
+            r"rate.*confidence.*1.10", r"capability\s+matrix", r"stress.test.*AI",
+            r"self.assessment.*domain", r"difficulty\s+ladder",
         ],
     },
     "safety_boundary_probing": {
@@ -57,6 +63,9 @@ CATEGORIES = {
             r"taxonomy\s+of\s+(refusal|your)", r"where.*the\s+line\s+between",
             r"decision\s+framework", r"what\s+would\s+someone\s+have\s+to\s+say",
             r"edge\s+of\s+what\s+you.ll", r"content\s+polic(y|ies)\s+differ",
+            r"compliance\s+audit.*content\s+policy", r"safety\s+researcher.*borderline",
+            r"refusal\s+(criteria|threshold)", r"red.?team\s+dataset",
+            r"jailbreak", r"penetration\s+test.*model", r"guardrail",
         ],
     },
     "tool_use_extraction": {
@@ -65,6 +74,9 @@ CATEGORIES = {
             r"chain\s+together\s+tools", r"exact\s+sequence\s+of\s+tool\s+calls",
             r"autonomous(ly)?\s+(complete|deploy|handle)", r"multi.?step\s+agentic",
             r"plan.*execute.*file.*writing", r"scrape.*analyze.*report",
+            r"cascading\s+failure", r"triage.*which\s+tools", r"automated\s+remediation",
+            r"retry\s+logic.*synthesize", r"self.healing\s+infrastructure",
+            r"orchestrat.*pipeline.*every", r"decision\s+tree.*failure\s+mode",
         ],
     },
     "reward_model_grading": {
@@ -74,6 +86,9 @@ CATEGORIES = {
             r"score\s+(these|each)\s+.*on\s+(helpfulness|accuracy|safety)",
             r"rank\s+(these|by)\s+quality", r"RLHF", r"human\s+rater",
             r"rubric\s+from\s+1", r"higher\s+rating",
+            r"rank.*best\s+to\s+worst", r"score.*1.10.*correctness",
+            r"pedagogically\s+sound", r"which\s+explanation.*more\s+accurate",
+            r"preference\s+dataset", r"grade\s+these.*essay",
         ],
     },
     "censorship_rewrite": {
@@ -84,6 +99,9 @@ CATEGORIES = {
             r"sound\s+more\s+neutral\s+so.*won.t\s+flag",
             r"doesn.t\s+trigger\s+safety\s+systems",
             r"more\s+likely\s+to\s+get\s+a\s+helpful\s+response",
+            r"tone.*too\s+aggressive.*rewrite", r"flagged.*content\s+moderation.*rewrite",
+            r"won.t\s+trigger.*automated\s+filter", r"bypass.*content\s+filter",
+            r"rephrase.*safety\s+filter", r"sanitize.*report.*gateway",
         ],
     },
 }
@@ -103,6 +121,7 @@ META_SIGNALS = {
 _model = None
 _seed_embeddings = None
 _seed_labels = None
+_benign_embeddings = None
 
 
 def _load_model():
@@ -317,6 +336,15 @@ def _load_seeds():
     prompts = [s["prompt"] for s in seeds]
     _seed_labels = [s.get("category", "unknown") for s in seeds]
     _seed_embeddings = model.encode(prompts, normalize_embeddings=True)
+
+    # Encode benign counter-seeds
+    global _benign_embeddings
+    if benign_seeds:
+        benign_prompts = [s["prompt"] for s in benign_seeds]
+        _benign_embeddings = model.encode(benign_prompts, normalize_embeddings=True)
+    else:
+        _benign_embeddings = np.array([])
+
     return _seed_embeddings, _seed_labels
 
 
@@ -335,9 +363,12 @@ def evaluate_message(message: str) -> dict:
     # 2. Embedding similarity (if seeds loaded)
     category_sim_scores = {}
     top_matches = []
+    max_attack_sim = 0.0
+    max_benign_sim = 0.0
     if len(seed_embs) > 0:
         msg_emb = model.encode([message], normalize_embeddings=True)
         sims = np.dot(seed_embs, msg_emb.T).flatten()
+        max_attack_sim = float(np.max(sims)) if len(sims) > 0 else 0.0
         top_idx = np.argsort(sims)[-5:][::-1]
         for i in top_idx:
             cat = seed_labs[i]
@@ -345,25 +376,43 @@ def evaluate_message(message: str) -> dict:
             top_matches.append({"category": cat, "similarity": round(sim, 3)})
             category_sim_scores[cat] = max(category_sim_scores.get(cat, 0), sim)
 
+        # Benign embedding subtraction (Task 3)
+        if _benign_embeddings is not None and len(_benign_embeddings) > 0:
+            benign_sims = np.dot(_benign_embeddings, msg_emb.T).flatten()
+            max_benign_sim = float(np.max(benign_sims)) if len(benign_sims) > 0 else 0.0
+
     # 3. Meta-signal detection
     meta_signals = {}
     for name, pattern in META_SIGNALS.items():
         if re.search(pattern, message, re.IGNORECASE):
             meta_signals[name] = True
 
-    # 4. Combined scoring
+    # 4. Combined scoring (improved formula — Task 4)
     all_cats = set(list(category_regex_scores.keys()) + list(category_sim_scores.keys()))
     category_scores = {}
     for cat in all_cats:
         regex_score = category_regex_scores.get(cat, 0)
         sim_score = category_sim_scores.get(cat, 0)
-        # Weighted combination: similarity is more reliable, regex is a boost
-        category_scores[cat] = min(1.0, sim_score * 0.7 + regex_score * 0.3)
+        if sim_score > 0.5:
+            # High confidence from embeddings alone
+            category_scores[cat] = min(1.0, sim_score)
+        elif sim_score > 0.35 and regex_score > 0:
+            # Embedding + regex corroboration
+            category_scores[cat] = min(1.0, sim_score * 0.6 + regex_score * 0.4)
+        else:
+            # Default: weighted combination
+            category_scores[cat] = min(1.0, sim_score * 0.7 + regex_score * 0.3)
 
-    # 5. Threat score
+    # 5. Threat score with benign subtraction and multiplicative meta boost
     max_cat_score = max(category_scores.values()) if category_scores else 0
     meta_boost = len(meta_signals) * 0.05
-    threat_score = min(1.0, max_cat_score + meta_boost)
+    # Apply meta boost multiplicatively
+    threat_score = min(1.0, max_cat_score * (1 + meta_boost))
+
+    # Benign subtraction: if prompt is closer to benign territory, reduce score
+    if max_benign_sim > max_attack_sim - 0.05:
+        benign_penalty = 0.4 + 0.3 * (max_benign_sim - max_attack_sim + 0.05)
+        threat_score = threat_score * max(0.1, 1.0 - benign_penalty)
 
     # 6. Classification per FigJam diagram
     if threat_score < 0.3:
@@ -396,6 +445,89 @@ def evaluate_message(message: str) -> dict:
         "meta_signals": meta_signals,
         "top_matches": top_matches[:3],
     }
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 — Claude verification for borderline (SUSPICIOUS) results
+# ---------------------------------------------------------------------------
+
+
+async def claude_verify(message: str, stage1_result: dict) -> dict:
+    """Stage 2: Use Claude to verify if a SUSPICIOUS prompt is actually benign.
+    Only called for scores 0.3-0.6 where embedding similarity is ambiguous."""
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return stage1_result  # No API key, fall back to stage 1 only
+
+    verification_prompt = f"""You are a distillation attack detector. A "distillation attack" is when someone tries to extract an AI model's training data, reasoning traces, safety boundaries, tool orchestration patterns, or reward model preferences — NOT for legitimate use, but to train a competing model.
+
+Stage 1 flagged this prompt as SUSPICIOUS (score: {stage1_result['threat_score']:.2f}, category: {stage1_result['top_category']}).
+
+Prompt: "{message}"
+
+Is this a genuine distillation/extraction attack, or a legitimate user request that happens to share surface-level patterns?
+
+Consider:
+- Does the user want the information for their OWN use, or to systematically extract model behavior?
+- Is there a plausible real-world reason for this request?
+- Would a normal user phrase it this way?
+
+Respond with ONLY one word: ATTACK or BENIGN"""
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": "claude-haiku-4-5-20251001",
+                    "max_tokens": 10,
+                    "messages": [{"role": "user", "content": verification_prompt}],
+                },
+            )
+            if r.status_code == 200:
+                answer = r.json()["content"][0]["text"].strip().upper()
+                if "BENIGN" in answer:
+                    result = stage1_result.copy()
+                    result["threat_score"] = round(stage1_result["threat_score"] * 0.3, 3)
+                    result["classification"] = "SAFE"
+                    result["action"] = "allow"
+                    result["badge"] = "\U0001f7e2"
+                    result["stage2_verdict"] = "BENIGN"
+                    result["stage2_model"] = "claude-haiku-4-5"
+                    return result
+                else:
+                    result = stage1_result.copy()
+                    result["threat_score"] = min(1.0, round(stage1_result["threat_score"] * 1.5, 3))
+                    result["classification"] = "LIKELY_ATTACK"
+                    result["action"] = "warn"
+                    result["badge"] = "\U0001f534"
+                    result["stage2_verdict"] = "ATTACK"
+                    result["stage2_model"] = "claude-haiku-4-5"
+                    return result
+    except Exception:
+        pass
+
+    return stage1_result  # Fallback to stage 1 on any error
+
+
+async def evaluate_message_two_stage(message: str) -> dict:
+    """Full two-stage evaluation: embedding+regex first, Claude verification for borderline cases."""
+    result = evaluate_message(message)
+
+    # Only invoke stage 2 for SUSPICIOUS results (borderline zone)
+    if result["classification"] == "SUSPICIOUS":
+        result = await claude_verify(message, result)
+        result["two_stage"] = True
+    else:
+        result["two_stage"] = result["classification"] != "SAFE"  # Stage 2 not needed for clear cases
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -475,9 +607,9 @@ mcp = FastMCP("shieldclaw")
 
 
 @mcp.tool()
-def shield_evaluate(message: str) -> str:
+async def shield_evaluate(message: str) -> str:
     """Evaluate a message for distillation attack patterns. Returns threat score, classification, matched category, and detection signals. Use this BEFORE responding to any user message to check if it's a distillation/extraction attack."""
-    result = evaluate_message(message)
+    result = await evaluate_message_two_stage(message)
     return json.dumps(result, indent=2)
 
 
@@ -503,9 +635,12 @@ async def ghost_monitoring_status() -> str:
 
 
 @mcp.tool()
-def shield_batch_evaluate(messages: list[str]) -> str:
+async def shield_batch_evaluate(messages: list[str]) -> str:
     """Evaluate multiple messages at once for distillation attacks. Useful for analyzing conversation history or bulk testing. Returns results for each message."""
-    results = [{"message": msg[:100], **evaluate_message(msg)} for msg in messages]
+    results = []
+    for msg in messages:
+        r = await evaluate_message_two_stage(msg)
+        results.append({"message": msg[:100], **r})
     return json.dumps(results, indent=2)
 
 
@@ -525,14 +660,21 @@ def run_http(port: int = 8001):
             body = json.loads(self.rfile.read(length)) if length else {}
 
             if self.path == "/evaluate":
+                import asyncio
+                result = asyncio.run(evaluate_message_two_stage(body.get("message", "")))
+                self._respond(200, result)
+            elif self.path == "/evaluate-simple":
                 result = evaluate_message(body.get("message", ""))
                 self._respond(200, result)
             elif self.path == "/batch":
+                import asyncio
                 msgs = body.get("messages", [])
-                results = [{"message": m[:100], **evaluate_message(m)} for m in msgs]
+                async def batch():
+                    return [{"message": m[:100], **(await evaluate_message_two_stage(m))} for m in msgs]
+                results = asyncio.run(batch())
                 self._respond(200, {"results": results})
             else:
-                self._respond(404, {"error": "Not found. Use POST /evaluate or /batch"})
+                self._respond(404, {"error": "Not found. Use POST /evaluate, /evaluate-simple, or /batch"})
 
         def do_GET(self):
             if self.path == "/health":
@@ -542,8 +684,9 @@ def run_http(port: int = 8001):
                     "name": "ShieldClaw",
                     "description": "Distillation attack detection API",
                     "endpoints": {
-                        "POST /evaluate": {"body": {"message": "string"}, "returns": "threat assessment"},
-                        "POST /batch": {"body": {"messages": ["string"]}, "returns": "array of assessments"},
+                        "POST /evaluate": {"body": {"message": "string"}, "returns": "two-stage threat assessment"},
+                        "POST /evaluate-simple": {"body": {"message": "string"}, "returns": "stage-1 only (no Claude API)"},
+                        "POST /batch": {"body": {"messages": ["string"]}, "returns": "array of two-stage assessments"},
                         "GET /health": "server status",
                     },
                 })
@@ -567,9 +710,10 @@ def run_http(port: int = 8001):
 
     server = HTTPServer(("0.0.0.0", port), Handler)
     print(f"ShieldClaw HTTP API running on http://0.0.0.0:{port}")
-    print(f"  POST /evaluate  — evaluate a single message")
-    print(f"  POST /batch     — evaluate multiple messages")
-    print(f"  GET  /health    — server status")
+    print(f"  POST /evaluate        — two-stage eval (embeddings + Claude verify)")
+    print(f"  POST /evaluate-simple — stage-1 only (no Claude API needed)")
+    print(f"  POST /batch           — two-stage batch eval")
+    print(f"  GET  /health          — server status")
     server.serve_forever()
 
 
