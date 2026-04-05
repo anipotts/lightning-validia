@@ -1,5 +1,5 @@
 {
-  "name": "claudemon",
+  "name": "@claudemon/cli-legacy",
   "version": "0.1.0",
   "description": "CLI for ClaudeMon — monitor your Claude Code sessions in real time",
   "bin": {
