@@ -1,0 +1,20 @@
+{
+  "name": "claudemon",
+  "version": "0.1.0",
+  "description": "CLI for ClaudeMon — monitor your Claude Code sessions in real time",
+  "bin": {
+    "claudemon": "dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "@types/node": "^22.0.0"
+  }
+}
