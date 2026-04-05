@@ -12,6 +12,8 @@ import {
 import { analyzePrompt, analyzePromptAPI } from "./analyzer";
 import { PipelineView } from "../components/pipeline/PipelineView";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+
 // ─── Types ──────────────────────────────────────────────
 
 interface ChatMessage {
@@ -255,7 +257,7 @@ const RephraseButton = React.memo(function RephraseButton({ prompt, category, on
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/rephrase", {
+        const res = await fetch(`${API_URL}/rephrase`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt, category }),
@@ -397,7 +399,7 @@ export default function Home() {
     }, 15000);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userText }),
