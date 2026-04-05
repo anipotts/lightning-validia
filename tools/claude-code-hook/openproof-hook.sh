@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# OpenProof Monitor Hook — forwards Claude Code hook events to the monitor API
+# ClaudeMon Hook — forwards Claude Code hook events to the monitor API
 #
 # This script receives the full hook JSON on stdin, enriches it with
 # machine_id, timestamp, and project_path, then POSTs it to the monitor API.
 #
 # Environment variables:
-#   OPENPROOF_MONITOR_URL — API endpoint (default: https://openproof-monitor.anipotts.workers.dev)
+#   CLAUDEMON_API_URL — API endpoint (default: https://api.claudemon.com)
 #   CLAUDE_SESSION_ID     — Set automatically by Claude Code
 #   CLAUDE_HOOK_EVENT_NAME — Set automatically by Claude Code
 
 set -euo pipefail
 
-API_URL="${OPENPROOF_MONITOR_URL:-https://openproof-monitor.anipotts.workers.dev}"
+API_URL="${CLAUDEMON_API_URL:-https://api.claudemon.com}"
 MACHINE_ID="$(hostname -s | tr '[:upper:]' '[:lower:]')"
 TIMESTAMP="$(date +%s)000"
 PROJECT_PATH="${PWD}"
