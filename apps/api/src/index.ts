@@ -170,9 +170,12 @@ app.post("/batch", async (c) => {
 // ---------------------------------------------------------------------------
 
 app.post("/chat", async (c) => {
-  const { messages } = await c.req.json<{
-    messages: Array<{ role: string; content: string }>;
+  const body = await c.req.json<{
+    message?: string;
+    messages?: Array<{ role: string; content: string }>;
   }>();
+  const messages = body.messages || (body.message ? [{ role: "user", content: body.message }] : null);
+  if (!messages) return c.json({ error: "message or messages is required" }, 400);
 
   let response: Response;
   try {
@@ -246,7 +249,9 @@ app.post("/chat", async (c) => {
 // ---------------------------------------------------------------------------
 
 app.post("/rephrase", async (c) => {
-  const { message } = await c.req.json<{ message: string }>();
+  const body = await c.req.json<{ message?: string; prompt?: string; category?: string }>();
+  const message = body.message || body.prompt;
+  if (!message) return c.json({ error: "message or prompt is required" }, 400);
 
   let response: Response;
   try {
