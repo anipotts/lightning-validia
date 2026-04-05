@@ -1,6 +1,7 @@
 name = "openproof-api"
 main = "src/index.ts"
 compatibility_date = "2025-04-01"
+account_id = "0f856093bdcd34a7da1bde5ee4385163"
 
 [ai]
 binding = "AI"
@@ -8,7 +9,7 @@ binding = "AI"
 [[d1_databases]]
 binding = "DB"
 database_name = "openproof"
-database_id = ""
+database_id = "c5153bad-c061-4544-8b40-ced0feee79d1"
 
 [vars]
 GHOST_API_URL = "http://localhost:8000"
