@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import { PipelineStepRow } from "./PipelineStepRow";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 
-export function PipelineView({ steps, isRunning, isAnalyzing }: {
+export const PipelineView = React.memo(function PipelineView({ steps, isRunning, isAnalyzing }: {
   steps: { text: string; color: string }[];
   isRunning: boolean;
   isAnalyzing: boolean;
@@ -44,4 +44,4 @@ export function PipelineView({ steps, isRunning, isAnalyzing }: {
       </div>
     </div>
   );
-}
+});

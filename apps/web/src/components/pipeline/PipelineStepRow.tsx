@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 
 function getBorderColor(text: string): string {
@@ -8,7 +8,7 @@ function getBorderColor(text: string): string {
   return "#3d3a34";
 }
 
-export function PipelineStepRow({ step, index, devMode }: {
+export const PipelineStepRow = React.memo(function PipelineStepRow({ step, index, devMode }: {
   step: { text: string; color: string };
   index: number;
   devMode: boolean;
@@ -16,7 +16,7 @@ export function PipelineStepRow({ step, index, devMode }: {
   const { copied, copy } = useCopyToClipboard();
   const [hovered, setHovered] = useState(false);
   const isResult = step.text.startsWith("RESULT:");
-  const borderColor = getBorderColor(step.text);
+  const borderColor = useMemo(() => getBorderColor(step.text), [step.text]);
 
   return (
     <div
@@ -39,4 +39,4 @@ export function PipelineStepRow({ step, index, devMode }: {
       )}
     </div>
   );
-}
+});

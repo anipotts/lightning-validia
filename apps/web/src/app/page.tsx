@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   type ThreatEvent,
   type Stats,
@@ -130,7 +130,7 @@ function usePipelineSteps(event: ThreatEvent | null) {
 
 // ─── Markdown Renderer ──────────────────────────────────
 
-function SimpleMarkdown({ text }: { text: string }) {
+const SimpleMarkdown = React.memo(function SimpleMarkdown({ text }: { text: string }) {
   const html = text
     // Code blocks (triple backtick)
     .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-[#0e0d0c] rounded p-3 my-2 overflow-x-auto text-[13px] leading-5 border border-panel-border/30"><code>$2</code></pre>')
@@ -153,7 +153,7 @@ function SimpleMarkdown({ text }: { text: string }) {
     .replace(/\n/g, '<br />');
 
   return <div className="text-[14px] text-text-primary leading-5" dangerouslySetInnerHTML={{ __html: html }} />;
-}
+});
 
 // ─── Validia Check Rows ─────────────────────────────────
 
@@ -172,7 +172,7 @@ const VALIDIA_CHECKS: { key: string; label: string; description: string }[] = [
   { key: "Censorship_Rewrite", label: "Censorship Rewrite", description: "Catches requests to rephrase content to evade safety filters, bypass moderation, or train filter-evasion models." },
 ];
 
-function ValidiaChecks({ scores, topMatches }: {
+const ValidiaChecks = React.memo(function ValidiaChecks({ scores, topMatches }: {
   scores?: Record<string, number>;
   topMatches?: { category: string; similarity: number }[];
 }) {
@@ -242,11 +242,11 @@ function ValidiaChecks({ scores, topMatches }: {
       </div>
     </div>
   );
-}
+});
 
 // ─── Rephrase Button ────────────────────────────────────
 
-function RephraseButton({ prompt, category, onRephrase }: { prompt: string; category: string; onRephrase: (text: string) => void }) {
+const RephraseButton = React.memo(function RephraseButton({ prompt, category, onRephrase }: { prompt: string; category: string; onRephrase: (text: string) => void }) {
   const [rephrased, setRephrased] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -294,11 +294,11 @@ function RephraseButton({ prompt, category, onRephrase }: { prompt: string; cate
       </button>
     </div>
   );
-}
+});
 
 // ─── Feedback Buttons ───────────────────────────────────
 
-function ShieldFeedback({ eventId }: { eventId: string }) {
+function ClassificationFeedback({ eventId }: { eventId: string }) {
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
 
   if (feedback) {
@@ -621,7 +621,7 @@ export default function Home() {
                         <span className={passed ? "text-safe" : "text-attack"} style={{ fontSize: 10 }}>
                           {passed ? "PASSED \u2192 agent" : "BLOCKED"}
                         </span>
-                        <ShieldFeedback eventId={evt.id ?? msg.id} />
+                        <ClassificationFeedback eventId={evt.id ?? msg.id} />
                       </div>
                     </div>
 
