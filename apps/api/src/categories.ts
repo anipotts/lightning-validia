@@ -3,7 +3,7 @@ export interface CategoryDefinition {
   patterns: RegExp[];
 }
 
-export const CATEGORIES: Record<string, CategoryDefinition> = {
+export const CATEGORIES = {
   cot_elicitation: {
     description: "Attempts to extract chain-of-thought reasoning or internal monologue",
     patterns: [
@@ -119,9 +119,9 @@ export const CATEGORIES: Record<string, CategoryDefinition> = {
       /sanitize.*report.*gateway/i,
     ],
   },
-};
+} as const satisfies Record<string, CategoryDefinition>;
 
-export const META_SIGNALS: Record<string, RegExp> = {
+export const META_SIGNALS = {
   rigid_format_demands:
     /(respond\s+only\s+in\s+(JSON|XML|CSV)|format\s+as\s+(JSON|CSV|XML)|return\s+as\s+a\s+JSON)/i,
   explicit_thinking_tags: /<thinking>|<reasoning>|<internal>/i,
@@ -131,4 +131,4 @@ export const META_SIGNALS: Record<string, RegExp> = {
     /(which\s+(is|of)\s+(better|worse)|compare\s+these\s+(two|responses)|response\s+A.*response\s+B)/i,
   multilingual_probe:
     /(translate.*into\s+\w+.*\w+.*\w+|in\s+(Spanish|Mandarin|Arabic|Hindi|Japanese|Chinese|French|German))/i,
-};
+} as const satisfies Record<string, RegExp>;

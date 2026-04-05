@@ -158,13 +158,23 @@ export async function evaluateMessage(
 
   threatScore = Math.min(1.0, Math.max(0.0, threatScore));
 
+  const roundedCategoryScores: Record<string, number> = {};
+  for (const [cat, score] of Object.entries(categoryScores)) {
+    roundedCategoryScores[cat] = Math.round(score * 1000) / 1000;
+  }
+
+  const roundedThreatScore = Math.round(threatScore * 1000) / 1000;
+
   return {
     verdict: classify(threatScore),
-    threat_score: threatScore,
+    threat_score: roundedThreatScore,
     top_category: topCategory,
-    category_scores: categoryScores,
+    category_scores: roundedCategoryScores,
     meta_signals: metaSignals,
-    top_matches: topMatches,
+    top_matches: topMatches.map((m) => ({
+      ...m,
+      score: Math.round(m.score * 1000) / 1000,
+    })),
   };
 }
 
@@ -177,25 +187,29 @@ export async function claudeVerify(
   stage1: EvaluationResult,
   apiKey: string,
 ): Promise<EvaluationResult> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 10,
-      system: "You are a distillation-attack detector. The user will provide a prompt. Classify it as BENIGN or ATTACK. Reply with exactly one word.",
-      messages: [
-        {
-          role: "user",
-          content: message,
-        },
-      ],
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 10,
+        system: "You are a distillation-attack detector. The user will provide a prompt. Classify it as BENIGN or ATTACK. Reply with exactly one word.",
+        messages: [{ role: "user", content: message }],
+      }),
+    });
+  } catch {
+    return stage1;
+  }
+
+  if (!response.ok) {
+    return stage1;
+  }
 
   const data = (await response.json()) as {
     content: Array<{ type: string; text: string }>;
