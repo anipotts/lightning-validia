@@ -1,0 +1,68 @@
+name: Deploy ClaudeMon
+
+on:
+  push:
+    branches: [main, staging]
+  repository_dispatch:
+    types: [claudemon_event]
+
+jobs:
+  # Forward GitHub dispatch events to ClaudeMon API
+  relay-event:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'claudemon_event'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forward to ClaudeMon API
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: |
+          curl -sf -X POST "https://api.claudemon.com/events/webhook/github" \
+            -H "Content-Type: application/json" \
+            -H "X-Webhook-Secret: ${{ secrets.WEBHOOK_SECRET }}" \
+            -d "$PAYLOAD" \
+            --max-time 5
+
+  deploy-api:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --workspace=apps/monitor-api
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          workingDirectory: apps/monitor-api
+          command: deploy ${{ github.ref == 'refs/heads/staging' && '--env staging' || '' }}
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+
+  deploy-app:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --workspace=apps/monitor
+      - run: npm run build --workspace=apps/monitor
+        env:
+          VITE_MONITOR_API_URL: ${{ github.ref == 'refs/heads/staging' && 'https://staging-api.claudemon.com' || 'https://api.claudemon.com' }}
+          VITE_MONITOR_WS_URL: ${{ github.ref == 'refs/heads/staging' && 'wss://staging-api.claudemon.com/ws' || 'wss://api.claudemon.com/ws' }}
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          workingDirectory: apps/monitor
+          command: pages deploy dist --project-name=${{ github.ref == 'refs/heads/staging' && 'claudemon-staging' || 'claudemon' }}
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+
+  deploy-landing:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          workingDirectory: apps/landing
+          command: pages deploy . --project-name=claudemon-landing
+          apiToken: ${{ secrets.CF_API_TOKEN }}
