@@ -120,11 +120,11 @@ app.post("/evaluate", async (c) => {
     )
       .bind(
         message.slice(0, 2000),
-        verdictToRow(result.verdict),
+        verdictToRow(result.classification),
         result.threat_score,
         result.top_category,
         JSON.stringify(result.meta_signals),
-        verdictToAction(result.verdict),
+        verdictToAction(result.classification),
         session_id ?? null,
       )
       .run()

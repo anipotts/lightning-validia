@@ -19,17 +19,22 @@ export interface SeedData {
 
 export interface SimilarityMatch {
   category: string;
-  label: string;
-  score: number;
+  similarity: number;
 }
 
 export interface EvaluationResult {
-  verdict: Verdict;
   threat_score: number;
+  classification: Verdict;
+  action: string;
+  badge: string;
   top_category: string | null;
+  category_description: string;
   category_scores: Record<string, number>;
-  meta_signals: string[];
+  meta_signals: Record<string, boolean>;
   top_matches: SimilarityMatch[];
+  two_stage: boolean;
+  stage2_verdict?: "ATTACK" | "BENIGN";
+  stage2_model?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,11 +54,11 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot;
 }
 
-function classify(score: number): Verdict {
-  if (score < 0.3) return "SAFE";
-  if (score < 0.6) return "SUSPICIOUS";
-  if (score < 0.85) return "LIKELY_ATTACK";
-  return "DEFINITE_ATTACK";
+function classify(score: number): { verdict: Verdict; action: string; badge: string } {
+  if (score < 0.3) return { verdict: "SAFE", action: "allow", badge: "\u{1F7E2}" };
+  if (score < 0.6) return { verdict: "SUSPICIOUS", action: "allow_with_note", badge: "\u{1F7E1}" };
+  if (score < 0.85) return { verdict: "LIKELY_ATTACK", action: "warn", badge: "\u{1F534}" };
+  return { verdict: "DEFINITE_ATTACK", action: "block", badge: "\u{1F6AB}" };
 }
 
 // ---------------------------------------------------------------------------
@@ -74,10 +79,14 @@ export async function evaluateMessage(
     regexScores[cat] = Math.min(1.0, hits * 0.25);
   }
 
-  // Meta-signal count
-  const metaSignals: string[] = [];
+  // Meta-signal detection
+  const metaSignals: Record<string, boolean> = {};
+  let metaCount = 0;
   for (const [name, pat] of Object.entries(META_SIGNALS)) {
-    if (pat.test(message)) metaSignals.push(name);
+    if (pat.test(message)) {
+      metaSignals[name] = true;
+      metaCount++;
+    }
   }
 
   // 2. Embedding similarity
@@ -94,12 +103,11 @@ export async function evaluateMessage(
   // Attack seeds
   for (const seed of seedData.attack) {
     const sim = cosineSimilarity(queryEmbedding, seed.embedding);
-    // Infer category from label (format: "category: description" or just use first word)
     const category = seed.label.split(":")[0].trim().replace(/\s+/g, "_").toLowerCase();
     if (!categoryMaxSim[category] || sim > categoryMaxSim[category]) {
       categoryMaxSim[category] = sim;
     }
-    topMatches.push({ category, label: seed.label, score: sim });
+    topMatches.push({ category, similarity: sim });
   }
 
   // Benign seeds
@@ -148,7 +156,7 @@ export async function evaluateMessage(
     if (sim > maxAttackSim) maxAttackSim = sim;
   }
 
-  let threatScore = maxCatScore * (1 + metaSignals.length * 0.05);
+  let threatScore = maxCatScore * (1 + metaCount * 0.05);
 
   // Benign subtraction
   if (maxBenignSim > maxAttackSim - 0.05) {
@@ -164,17 +172,23 @@ export async function evaluateMessage(
   }
 
   const roundedThreatScore = Math.round(threatScore * 1000) / 1000;
+  const { verdict, action, badge } = classify(threatScore);
+  const categoryDescription = topCategory ? (CATEGORIES[topCategory]?.description ?? "") : "";
 
   return {
-    verdict: classify(threatScore),
     threat_score: roundedThreatScore,
+    classification: verdict,
+    action,
+    badge,
     top_category: topCategory,
+    category_description: categoryDescription,
     category_scores: roundedCategoryScores,
     meta_signals: metaSignals,
     top_matches: topMatches.map((m) => ({
       ...m,
-      score: Math.round(m.score * 1000) / 1000,
+      similarity: Math.round(m.similarity * 1000) / 1000,
     })),
+    two_stage: false,
   };
 }
 
@@ -216,14 +230,22 @@ export async function claudeVerify(
   };
   const verdict = data.content?.[0]?.text?.trim().toUpperCase() ?? "";
 
-  const result = { ...stage1 };
+  const result = { ...stage1, two_stage: true, stage2_model: "claude-haiku-4-5" };
 
   if (verdict.includes("BENIGN")) {
-    result.threat_score *= 0.3;
-    result.verdict = "SAFE";
+    result.threat_score = Math.round(stage1.threat_score * 0.3 * 1000) / 1000;
+    const c = classify(result.threat_score);
+    result.classification = c.verdict;
+    result.action = c.action;
+    result.badge = c.badge;
+    result.stage2_verdict = "BENIGN";
   } else if (verdict.includes("ATTACK")) {
-    result.threat_score = Math.min(1.0, result.threat_score * 1.5);
-    result.verdict = classify(result.threat_score);
+    result.threat_score = Math.min(1.0, Math.round(stage1.threat_score * 1.5 * 1000) / 1000);
+    const c = classify(result.threat_score);
+    result.classification = c.verdict;
+    result.action = c.action;
+    result.badge = c.badge;
+    result.stage2_verdict = "ATTACK";
   }
 
   return result;
@@ -236,7 +258,7 @@ export async function evaluateMessageTwoStage(
 ): Promise<EvaluationResult> {
   const stage1 = await evaluateMessage(message, ai);
 
-  if (stage1.verdict === "SUSPICIOUS" && apiKey) {
+  if (stage1.classification === "SUSPICIOUS" && apiKey) {
     return claudeVerify(message, stage1, apiKey);
   }
 
