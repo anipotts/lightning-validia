@@ -1,0 +1,12 @@
+{
+  "name": "claudemon-landing",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev .",
+    "deploy": "wrangler pages deploy . --project-name=claudemon-landing"
+  },
+  "devDependencies": {
+    "wrangler": "^4.80.0"
+  }
+}
