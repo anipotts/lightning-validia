@@ -66,10 +66,12 @@ app.use(
   "*",
   cors({
     origin: [
+      "https://openproof.pages.dev",
       "https://openproof-api.anipotts.workers.dev",
       "http://localhost:3000",
     ],
     allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type"],
   }),
 );
 
