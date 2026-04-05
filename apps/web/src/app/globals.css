@@ -37,6 +37,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html, body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--bg);
   color: var(--text-primary);

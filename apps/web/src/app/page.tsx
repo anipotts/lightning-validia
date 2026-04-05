@@ -11,6 +11,7 @@ import {
 } from "./types";
 import { analyzePrompt, analyzePromptAPI } from "./analyzer";
 import { PipelineView } from "../components/pipeline/PipelineView";
+import { ShieldCheck, ShieldWarning, Prohibit, Circle } from "@phosphor-icons/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
@@ -539,11 +540,11 @@ export default function Home() {
   const maxCatCount = catEntries.length > 0 ? catEntries[0].count : 1;
 
   return (
-    <div className="flex flex-col h-screen bg-bg text-text-primary font-mono">
+    <div className="flex flex-col h-screen bg-bg text-text-primary font-mono overflow-hidden">
       {/* Header */}
       <header className="h-11 shrink-0 flex items-center justify-between px-5 bg-item border-b border-panel-border shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-3">
-          <span className="text-lg font-bold tracking-wider">&#x1f6e1; OPENPROOF</span>
+          <span className="text-lg font-bold tracking-wider flex items-center gap-1.5"><ShieldCheck size={20} weight="bold" /> OPENPROOF</span>
           <span className="text-text-sub">|</span>
           <span className="text-[11px] text-text-dim tracking-wider">DISTILLATION ATTACK DETECTION</span>
         </div>
@@ -561,7 +562,7 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full gap-2">
-                <span className="text-[28px]">&#x1f6e1;</span>
+                <ShieldCheck size={28} weight="bold" className="text-safe" />
                 <span className="text-[14px] text-text-primary font-bold">OpenProof Active</span>
                 <span className="text-[12px] text-text-dim">Send any prompt to scan for distillation attack patterns.</span>
               </div>
@@ -715,13 +716,13 @@ export default function Home() {
         </div>
 
         {/* === RIGHT SIDEBAR === */}
-        <div className="w-[300px] shrink-0 border-l border-panel-border overflow-y-auto flex flex-col">
+        <div className="w-[300px] shrink-0 border-l border-panel-border overflow-y-auto">
 
           {/* Pipeline */}
           <PipelineView steps={pipelineSteps} isRunning={pipelineRunning} isAnalyzing={isAnalyzing} />
 
           {/* Session Stats */}
-          <div className="border-b border-panel-border flex-1 flex flex-col">
+          <div className="border-b border-panel-border">
             <div className="px-3 py-2">
               <span className="text-[10px] text-text-label uppercase tracking-[2px]">Session</span>
             </div>

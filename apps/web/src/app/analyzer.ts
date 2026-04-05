@@ -4,10 +4,10 @@ import type { ThreatLevel, AttackCategory, MetaSignal, ThreatEvent } from "./typ
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 const THREAT_BADGE: Record<ThreatLevel, string> = {
-  safe: "\u{1F7E2}",
-  suspicious: "\u{1F7E1}",
-  likely_attack: "\u{1F7E0}",
-  blocked: "\u{1F534}",
+  safe: "[SAFE]",
+  suspicious: "[SUSPICIOUS]",
+  likely_attack: "[ATTACK]",
+  blocked: "[BLOCKED]",
 };
 
 function buildResponse(
