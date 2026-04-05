@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenProof — Distillation Attack Detection",
-  description: "Real-time defense against model extraction, chain-of-thought harvesting, and capability probing attacks on LLMs.",
+  title: "OpenProof — Multi-Agent Monitor",
+  description: "Real-time visibility into AI coding agents across environments, repos, and branches. Detect conflicts before they become merge nightmares.",
 };
 
 export default function RootLayout({
