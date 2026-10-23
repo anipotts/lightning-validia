@@ -10,7 +10,7 @@
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
-    "solid-js": "^1.9.5"
+    "solid-js": "^1.9.17"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
